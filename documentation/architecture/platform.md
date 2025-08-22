@@ -25,4 +25,4 @@ The platform is built using a microservices architecture, allowing for scalabili
 The platform uses a relational database to store data related to users, events, teams, matches, and statistics. Each schema is designed to efficiently manage the relationships between different entities in the platform.
 
 > [!NOTE]
->  More details on the database schemas can be found in the [Database Schemas documentation](../database/schemas/README.md).
+>  More details on the database schemas can be found in the [Database Schemas documentation](../database/README.md).
