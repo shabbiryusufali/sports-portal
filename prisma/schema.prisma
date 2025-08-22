@@ -38,6 +38,7 @@ model Event {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   organizer_id String
+  organizer User @relation(fields: [organizer_id], references: [id])
   participants Team[] @relation("Events")
   players Player[] @relation("Events")
   status String // "scheduled" | "ongoing" | "completed" | "cancelled"
