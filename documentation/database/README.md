@@ -10,20 +10,20 @@ The Sports Portal application uses PostgreSQL as its relational database managem
 
 ## Database Schemas
 
-### [Event Table](./database/schemas/Event.md)
+### [Event Table](./schemas/Event.md)
 The Event table stores information about sports events, including their details, participants, and status.
 
-### [Sport Table](./database/schemas/Sport.md)
+### [Sport Table](./schemas/Sport.md)
 The Sport table contains information about different sports, including their names and descriptions.
 
-### [Team Table](./database/schemas/Team.md)
+### [Team Table](./schemas/Team.md)
 The Team table holds data about sports teams, including their members, captain, and sport association. For the sake of this application, a single player is considered a team.
 
-### [Match Table](./database/schemas/Match.md)
+### [Match Table](./schemas/Match.md)
 The Match table records details about matches, including the teams involved, scores, and match status.
 
-### [Statistics Table](./database/schemas/Statistics.md)
+### [Statistics Table](./schemas/Statistics.md)
 The Statistics table captures various statistics related to matches, teams, and players.
 
-### [User Table](./database/schemas/User.md)
+### [User Table](./schemas/User.md)
 The User table contains user account information, including login credentials and personal details.
