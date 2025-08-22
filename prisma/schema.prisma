@@ -38,11 +38,12 @@ model Event {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   organizer_id String
+  organizer User @relation("UserOrganizedEvents", fields: [organizer_id], references: [id])
   participants Team[] @relation("Events")
   players Player[] @relation("Events")
-  status String // "scheduled" | "ongoing" | "completed" | "cancelled"
+  status Status @default(SCHEDULED)
   notes String?
-  event_type String // "practice" | "game" | "tournament"
+  event_type EventType @default(PRACTICE)
   is_public Boolean @default(false)
   registration_deadline DateTime?
   matches Match[]
@@ -80,6 +81,7 @@ model User {
   updated_at DateTime @updatedAt
   is_active Boolean @default(true)
   player Player?
+  organizedEvents Event[] @relation("UserOrganizedEvents")
 }
 
 model UserStatistics {
@@ -129,5 +131,23 @@ model Match {
   updated_at DateTime @updatedAt
   statistics Statistics[]
   notes String?
-  match_type String // "friendly" | "tournament"
+  match_type MatchType @default(FRIENDLY)
+}
+
+enum Status {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum EventType {
+  PRACTICE
+  GAME
+  TOURNAMENT
+}
+
+enum MatchType {
+  FRIENDLY
+  TOURNAMENT
 }

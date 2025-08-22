@@ -1,3 +1,5 @@
+# Event Table
+
 | Column Name           | Data Type | Constraints                      | Description                                                                  |
 | --------------------- | --------- | -------------------------------- | ---------------------------------------------------------------------------- |
 | id                    | STRING    | PRIMARY KEY, DEFAULT cuid()      | Unique event identifier                                                      |

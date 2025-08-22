@@ -1,55 +1,45 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "public"."Status" AS ENUM ('SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED');
 
-  - You are about to drop the column `createdAt` on the `Event` table. All the data in the column will be lost.
-  - You are about to drop the column `end` on the `Event` table. All the data in the column will be lost.
-  - You are about to drop the column `start` on the `Event` table. All the data in the column will be lost.
-  - You are about to drop the column `teamId` on the `Event` table. All the data in the column will be lost.
-  - You are about to drop the column `type` on the `Event` table. All the data in the column will be lost.
-  - You are about to drop the column `sport` on the `Team` table. All the data in the column will be lost.
-  - Added the required column `end_time` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `event_type` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `name` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `organizer_id` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `sport_id` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `start_time` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `status` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updated_at` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `captain_id` to the `Team` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `sport_id` to the `Team` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updated_at` to the `Team` table without a default value. This is not possible if the table is not empty.
+-- CreateEnum
+CREATE TYPE "public"."EventType" AS ENUM ('PRACTICE', 'GAME', 'TOURNAMENT');
 
-*/
--- DropForeignKey
-ALTER TABLE "public"."Event" DROP CONSTRAINT "Event_teamId_fkey";
+-- CreateEnum
+CREATE TYPE "public"."MatchType" AS ENUM ('FRIENDLY', 'TOURNAMENT');
 
--- AlterTable
-ALTER TABLE "public"."Event" DROP COLUMN "createdAt",
-DROP COLUMN "end",
-DROP COLUMN "start",
-DROP COLUMN "teamId",
-DROP COLUMN "type",
-ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "description" TEXT,
-ADD COLUMN     "end_time" TIMESTAMP(3) NOT NULL,
-ADD COLUMN     "event_type" TEXT NOT NULL,
-ADD COLUMN     "is_public" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "location" TEXT,
-ADD COLUMN     "name" TEXT NOT NULL,
-ADD COLUMN     "organizer_id" TEXT NOT NULL,
-ADD COLUMN     "registration_deadline" TIMESTAMP(3),
-ADD COLUMN     "sport_id" TEXT NOT NULL,
-ADD COLUMN     "start_time" TIMESTAMP(3) NOT NULL,
-ADD COLUMN     "status" TEXT NOT NULL,
-ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL;
+-- CreateTable
+CREATE TABLE "public"."Team" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "sport_id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "captain_id" TEXT NOT NULL,
 
--- AlterTable
-ALTER TABLE "public"."Team" DROP COLUMN "sport",
-ADD COLUMN     "captain_id" TEXT NOT NULL,
-ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "is_active" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "sport_id" TEXT NOT NULL,
-ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL;
+    CONSTRAINT "Team_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Event" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "start_time" TIMESTAMP(3) NOT NULL,
+    "end_time" TIMESTAMP(3) NOT NULL,
+    "location" TEXT,
+    "sport_id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "organizer_id" TEXT NOT NULL,
+    "status" "public"."Status" NOT NULL DEFAULT 'SCHEDULED',
+    "notes" TEXT,
+    "event_type" "public"."EventType" NOT NULL DEFAULT 'PRACTICE',
+    "is_public" BOOLEAN NOT NULL DEFAULT false,
+    "registration_deadline" TIMESTAMP(3),
+
+    CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "public"."Sport" (
@@ -129,7 +119,7 @@ CREATE TABLE "public"."Match" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
-    "match_type" TEXT NOT NULL,
+    "match_type" "public"."MatchType" NOT NULL DEFAULT 'FRIENDLY',
 
     CONSTRAINT "Match_pkey" PRIMARY KEY ("id")
 );
