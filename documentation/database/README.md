@@ -35,3 +35,7 @@ The Statistics table captures various statistics related to matches, teams, and 
 ### [User Table](./schemas/User.md)
 
 The User table contains user account information, including login credentials and personal details.
+
+### [Player Table](./schemas/Player.md)
+
+The Player table stores information about players, including their names, date of birth, and gender. Each player is linked to a user account.
