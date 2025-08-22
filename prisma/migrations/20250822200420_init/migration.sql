@@ -115,7 +115,7 @@ CREATE TABLE "public"."Match" (
     "event_id" TEXT,
     "score_team_a" INTEGER NOT NULL DEFAULT 0,
     "score_team_b" INTEGER NOT NULL DEFAULT 0,
-    "status" TEXT NOT NULL,
+    "status" "public"."Status" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
@@ -160,6 +160,9 @@ ALTER TABLE "public"."Team" ADD CONSTRAINT "Team_captain_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_sport_id_fkey" FOREIGN KEY ("sport_id") REFERENCES "public"."Sport"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_organizer_id_fkey" FOREIGN KEY ("organizer_id") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Player" ADD CONSTRAINT "Player_id_fkey" FOREIGN KEY ("id") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
