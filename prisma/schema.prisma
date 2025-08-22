@@ -126,7 +126,7 @@ model Match {
   event Event? @relation(fields: [event_id], references: [id])
   score_team_a Int @default(0)
   score_team_b Int @default(0)
-  status Status
+  status Status @default(SCHEDULED)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   statistics Statistics[]
