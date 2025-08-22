@@ -15,6 +15,14 @@ The platform is designed to support a wide range of sports and activities, provi
 ## Architecture
 The platform is built using a microservices architecture, allowing for scalability and flexibility. Each component of the platform (user management, event management, team organization, etc.) is developed as a separate service that communicates with others through APIs.
 
+## Technology Stack
+- **[Next.js](https://nextjs.org/)**: Used for building the frontend of the application, providing a responsive and interactive user interface.
+- **[PostgreSQL](https://www.postgresql.org/)**: The relational database management system used to store data related to users, events, teams, matches, and statistics.
+- **[Neon](https://neon.com/)**: Used for database, authentication, providing secure user account management and session handling.
+- **[Vercel](https://vercel.com/)**: The platform is hosted on Vercel, ensuring high availability and performance.
+
 ## Database Schemas
 The platform uses a relational database to store data related to users, events, teams, matches, and statistics. Each schema is designed to efficiently manage the relationships between different entities in the platform.
-- More details on the database schemas can be found in the [Database Schemas documentation](../database/schemas/README.md).
+
+> [! NOTE]
+>  More details on the database schemas can be found in the [Database Schemas documentation](../database/schemas/README.md).
