@@ -1,5 +1,11 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model Team {
   id     String  @id @default(cuid())
@@ -9,12 +15,12 @@ model Team {
 }
 
 model Event {
-  id     String   @id @default(cuid())
-  type   String   // "practice" | "game" | "tournament"
-  start  DateTime
-  end    DateTime
-  notes  String?
-  team   Team     @relation(fields: [teamId], references: [id])
-  teamId String
+  id        String   @id @default(cuid())
+  type      String   // "practice" | "game" | "tournament"
+  start     DateTime
+  end       DateTime
+  notes     String?
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String
   createdAt DateTime @default(now())
 }
