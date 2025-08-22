@@ -4,23 +4,130 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
+
 model Team {
-  id     String  @id @default(cuid())
-  name   String
-  sport  String
-  events Event[]
+  id String  @id @default(cuid())
+  name String
+  sport_id String
+  sport Sport @relation(fields: [sport_id], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  is_active Boolean @default(true)
+  captain_id String
+  captain Player @relation("Team_captain", fields: [captain_id], references: [id])
+  members Player[] @relation("Players")
+  events Event[] @relation("Events")
+  matchesAsTeamA Match[] @relation("TeamA")
+  matchesAsTeamB Match[] @relation("TeamB")
+  statistics Statistics[] @relation("TeamToStatistics")
+  userStatistics UserStatistics[]
 }
 
 model Event {
-  id        String   @id @default(cuid())
-  type      String   // "practice" | "game" | "tournament"
-  start     DateTime
-  end       DateTime
-  notes     String?
-  team      Team     @relation(fields: [teamId], references: [id])
-  teamId    String
-  createdAt DateTime @default(now())
+  id String @id @default(cuid())
+  name String
+  description String?
+  start_time DateTime
+  end_time DateTime
+  location String?
+  sport_id String
+  sport Sport @relation(fields: [sport_id], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  organizer_id String
+  participants Team[] @relation("Events")
+  players Player[] @relation("Events")
+  status String // "scheduled" | "ongoing" | "completed" | "cancelled"
+  notes String?
+  event_type String // "practice" | "game" | "tournament"
+  is_public Boolean @default(false)
+  registration_deadline DateTime?
+  matches Match[]
+}
+
+model Sport {
+  id String @id @default(cuid())
+  name String
+  description String?
+  is_team_sport Boolean @default(false)
+  events Event[]
+  teams Team[]
+  userStatistics UserStatistics[]
+  matches Match[]
+}
+
+model Player {
+  id String @id
+  user User @relation(fields: [id], references: [id])
+  first_name String
+  last_name String
+  date_of_birth DateTime
+  gender String
+  events Event[] @relation("Events")
+  teams Team[] @relation("Players")
+  captainOf Team[] @relation("Team_captain")
+}
+
+model User {
+  id String @id @default(cuid())
+  username String @unique
+  email String @unique
+  password_hash String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  is_active Boolean @default(true)
+  player Player?
+}
+
+model UserStatistics {
+  id String @id @default(cuid())
+  team_id String
+  team Team @relation(fields: [team_id], references: [id])
+  sport_id String
+  sport Sport @relation(fields: [sport_id], references: [id])
+  games_played Int @default(0)
+  wins Int @default(0)
+  losses Int @default(0)
+  draws Int @default(0)
+  flexible_stats Statistics[] @relation("UserFlexibleStats")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+model Statistics {
+  id String @id @default(cuid())
+  match_id String
+  match Match @relation(fields: [match_id], references: [id])
+  team_id String
+  team Team @relation("TeamToStatistics", fields: [team_id], references: [id])
+  key String
+  value Int
+  minutes_played Int @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userStatistics UserStatistics? @relation("UserFlexibleStats", fields: [user_statistics_id], references: [id])
+  user_statistics_id String?
+}
+
+model Match {
+  id String @id @default(cuid())
+  sport_id String
+  sport Sport @relation(fields: [sport_id], references: [id])
+  team_a_id String
+  team_a Team @relation("TeamA", fields: [team_a_id], references: [id])
+  team_b_id String
+  team_b Team @relation("TeamB", fields: [team_b_id], references: [id])
+  match_date DateTime
+  event_id String?
+  event Event? @relation(fields: [event_id], references: [id])
+  score_team_a Int @default(0)
+  score_team_b Int @default(0)
+  status String // "scheduled" | "ongoing" | "completed" | "cancelled"
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  statistics Statistics[]
+  notes String?
+  match_type String // "friendly" | "tournament"
 }
