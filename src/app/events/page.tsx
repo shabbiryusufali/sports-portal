@@ -10,10 +10,13 @@ export default async function EventsPage() {
       <h1 className="text-2xl font-bold">Events</h1>
       <EventForm teamId="DEMO_TEAM" />
       <ul className="space-y-2">
-        {events.map(e => (
+        {events.map((e) => (
           <li key={e.id} className="border rounded p-3">
             <div className="font-semibold">{e.type}</div>
-            <div>{new Date(e.start).toLocaleString()} → {new Date(e.end).toLocaleString()}</div>
+            <div>
+              {new Date(e.start).toLocaleString()} →{" "}
+              {new Date(e.end).toLocaleString()}
+            </div>
             {e.notes && <div className="opacity-80">{e.notes}</div>}
           </li>
         ))}
