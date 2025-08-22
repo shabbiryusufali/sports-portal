@@ -10,4 +10,4 @@
 | teams         | ARRAY     | RELATION TO Team                             | Teams the player is a member of   |
 | captainOf     | ARRAY     | RELATION TO Team (as captain)                | Teams where the player is captain |
 
-primary Key: `id`
+Primary Key: `id`
