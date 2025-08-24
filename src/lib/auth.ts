@@ -10,6 +10,7 @@ async function createUserWithCredentials(credentials: {
   const pwHash = saltAndHashPassword(credentials.password);
   let user = prisma.user.create({
     data: {
+      name: credentials.name,
       email: credentials.email,
       password_hash: pwHash,
       username:

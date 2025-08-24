@@ -1,7 +1,5 @@
 import NextAuth, { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
-import Facebook from "next-auth/providers/facebook";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { verifyPassword } from "./utils/password";
@@ -16,8 +14,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
   providers: [
     Google,
-    Facebook,
-    GitHub,
     Credentials({
       credentials: {
         email: { label: "Email" },
@@ -32,23 +28,19 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             password: string;
           };
 
-          // logic to salt and hash password
           if (!(await verifyPassword(email, password))) {
             return null;
           }
 
-          // logic to verify if the user exists
           user = await getUserFromDb(email);
 
           if (!user) {
             return null;
           }
 
-          // return JSON object with the user data
           return user;
         } catch (error) {
           if (error instanceof ZodError) {
-            // Return `null` to indicate that the credentials are invalid
             return null;
           }
           return null;
@@ -57,6 +49,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async authorized({ auth }) {
+      return !!auth;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

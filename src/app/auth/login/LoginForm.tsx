@@ -7,9 +7,10 @@ export default function LoginForm() {
         "use server";
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
-        await signIn("credentials", { email, password });
+        await signIn("credentials", { email, password, redirectTo: "/" });
         // await signIn("google");
       }}
+      className="text-black"
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
     >
       <label>

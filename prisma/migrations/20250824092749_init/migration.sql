@@ -54,8 +54,6 @@ CREATE TABLE "public"."Sport" (
 -- CreateTable
 CREATE TABLE "public"."Player" (
     "id" TEXT NOT NULL,
-    "first_name" TEXT NOT NULL,
-    "last_name" TEXT NOT NULL,
     "date_of_birth" TIMESTAMP(3) NOT NULL,
     "gender" TEXT NOT NULL,
 
@@ -67,6 +65,9 @@ CREATE TABLE "public"."User" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "name" TEXT,
+    "bio" TEXT,
+    "profile_picture" TEXT,
     "password_hash" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -115,7 +116,7 @@ CREATE TABLE "public"."Match" (
     "event_id" TEXT,
     "score_team_a" INTEGER NOT NULL DEFAULT 0,
     "score_team_b" INTEGER NOT NULL DEFAULT 0,
-    "status" "public"."Status" NOT NULL,
+    "status" "public"."Status" NOT NULL DEFAULT 'SCHEDULED',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
