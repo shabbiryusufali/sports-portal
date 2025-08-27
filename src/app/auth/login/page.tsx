@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { auth } from "@/api/auth/auth";
 import LoginForm from "./LoginForm";
 
 export default async function AuthPage() {

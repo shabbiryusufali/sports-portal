@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/auth";
+import { auth, signOut } from "@/api/auth/auth";
 import { redirect } from "next/navigation";
 
 export default async function SignOut() {

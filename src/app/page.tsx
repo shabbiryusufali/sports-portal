@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { auth } from "@/auth";
+import { auth } from "@/api/auth/auth";
 import SignOut from "./SignOut";
 
 export default async function Home() {

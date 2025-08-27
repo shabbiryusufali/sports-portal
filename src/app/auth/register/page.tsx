@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import RegisterForm from "./RegisterForm";
-import { auth } from "@/auth";
+import { auth } from "@/api/auth/auth";
 
 export default async function RegisterPage() {
   const session = await auth();

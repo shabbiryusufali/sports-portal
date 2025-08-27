@@ -2,10 +2,10 @@ import NextAuth, { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { verifyPassword } from "./utils/password";
-import { getUserFromDb } from "./utils/db";
+import { verifyPassword } from "../../utils/password";
+import { getUserFromDb } from "../../utils/db";
 import { ZodError } from "zod";
-import { prisma } from "./lib/db";
+import { prisma } from "../../lib/db";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -49,8 +49,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async authorized({ auth }) {
-      return !!auth;
+    async authorized({ request, auth }) {
+      return !!auth?.user;
     },
     async jwt({ token, user }) {
       if (user) {
