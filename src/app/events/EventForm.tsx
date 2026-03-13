@@ -27,7 +27,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
       }}
     >
       <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1">Event Name</label>
+        <label className="block text-xs font-medium text-zinc-400 mb-1">
+          Event Name
+        </label>
         <input
           type="text"
           name="name"
@@ -37,7 +39,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1">Event Type</label>
+        <label className="block text-xs font-medium text-zinc-400 mb-1">
+          Event Type
+        </label>
         <select
           name="type"
           className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
@@ -51,7 +55,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1">Start</label>
+          <label className="block text-xs font-medium text-zinc-400 mb-1">
+            Start
+          </label>
           <input
             type="datetime-local"
             name="start"
@@ -60,7 +66,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1">End</label>
+          <label className="block text-xs font-medium text-zinc-400 mb-1">
+            End
+          </label>
           <input
             type="datetime-local"
             name="end"
@@ -71,7 +79,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1">Location</label>
+        <label className="block text-xs font-medium text-zinc-400 mb-1">
+          Location
+        </label>
         <input
           type="text"
           name="location"
@@ -81,7 +91,9 @@ export default function EventForm({ teamId }: { teamId: string }) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1">Notes</label>
+        <label className="block text-xs font-medium text-zinc-400 mb-1">
+          Notes
+        </label>
         <input
           type="text"
           name="notes"

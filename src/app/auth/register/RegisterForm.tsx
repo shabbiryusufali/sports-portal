@@ -22,7 +22,8 @@ export default function RegisterForm() {
 
     try {
       const result = await registerWithCredentials(form);
-      if (!result.success) throw new Error(result.message || "Registration failed");
+      if (!result.success)
+        throw new Error(result.message || "Registration failed");
       setSuccess(true);
       setTimeout(() => router.push("/auth/login"), 1500);
     } catch (err: any) {
@@ -37,7 +38,9 @@ export default function RegisterForm() {
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl text-center">
         <div className="text-4xl mb-3">🎉</div>
         <p className="text-white font-semibold">Account created!</p>
-        <p className="text-zinc-400 text-sm mt-1">Redirecting you to sign in…</p>
+        <p className="text-zinc-400 text-sm mt-1">
+          Redirecting you to sign in…
+        </p>
       </div>
     );
   }
@@ -57,7 +60,10 @@ export default function RegisterForm() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="name">
+          <label
+            className="block text-xs font-medium text-zinc-400 mb-1.5"
+            htmlFor="name"
+          >
             Full Name
           </label>
           <input
@@ -73,7 +79,10 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="email">
+          <label
+            className="block text-xs font-medium text-zinc-400 mb-1.5"
+            htmlFor="email"
+          >
             Email
           </label>
           <input
@@ -89,7 +98,10 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="password">
+          <label
+            className="block text-xs font-medium text-zinc-400 mb-1.5"
+            htmlFor="password"
+          >
             Password
           </label>
           <input

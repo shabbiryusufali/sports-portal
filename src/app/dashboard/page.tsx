@@ -14,10 +14,14 @@ export default async function DashboardPage() {
     ...(user?.player?.events ?? []),
   ]
     .filter((e) => new Date(e.start_time) >= new Date())
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .sort(
+      (a, b) =>
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+    )
     .slice(0, 5);
 
   const teams = user?.player?.teams ?? [];
+  const hasPlayerProfile = !!user?.player;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -26,8 +30,22 @@ export default async function DashboardPage() {
         <span className="text-2xl font-black tracking-tighter">
           SPORTS<span className="text-[#00ff87]">PORTAL</span>
         </span>
-        <div className="flex items-center gap-4">
-          <span className="text-zinc-400 text-sm">{session.user?.name ?? session.user?.email}</span>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/teams"
+            className="text-sm text-zinc-400 hover:text-white transition hidden sm:block"
+          >
+            Teams
+          </Link>
+          <Link
+            href="/dashboard/profile"
+            className="text-sm text-zinc-400 hover:text-white transition hidden sm:block"
+          >
+            Profile
+          </Link>
+          <span className="text-zinc-400 text-sm hidden sm:block">
+            {session.user?.name ?? session.user?.email}
+          </span>
           <form
             action={async () => {
               "use server";
@@ -42,13 +60,39 @@ export default async function DashboardPage() {
       </nav>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
+        {/* Player profile nudge */}
+        {!hasPlayerProfile && (
+          <div className="mb-6 bg-amber-900/20 border border-amber-700/40 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-amber-400 text-sm">
+                Complete your player profile
+              </p>
+              <p className="text-zinc-400 text-xs mt-0.5">
+                You need a player profile to join teams and participate in
+                events.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/profile"
+              className="shrink-0 bg-amber-500 text-zinc-900 font-bold text-sm px-4 py-2 rounded-xl hover:bg-amber-400 transition"
+            >
+              Set up →
+            </Link>
+          </div>
+        )}
+
         {/* Welcome */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold">
             Welcome back,{" "}
-            <span className="text-[#00ff87]">{session.user?.name?.split(" ")[0] ?? "Athlete"}</span> 👋
+            <span className="text-[#00ff87]">
+              {session.user?.name?.split(" ")[0] ?? "Athlete"}
+            </span>{" "}
+            👋
           </h1>
-          <p className="text-zinc-400 mt-1">Here's what's happening with your teams and events.</p>
+          <p className="text-zinc-400 mt-1">
+            Here&apos;s what&apos;s happening with your teams and events.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -59,14 +103,16 @@ export default async function DashboardPage() {
               Upcoming Events
             </h2>
             {upcomingEvents.length === 0 ? (
-              <p className="text-zinc-500 text-sm">No upcoming events. Create one below!</p>
+              <p className="text-zinc-500 text-sm">
+                No upcoming events. Create one below!
+              </p>
             ) : (
               <ul className="space-y-3">
                 {upcomingEvents.map((e) => (
                   <li key={e.id} className="flex items-start gap-3">
                     <div className="mt-1 w-2 h-2 rounded-full bg-zinc-600 shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">{e.name}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{e.name}</p>
                       <p className="text-zinc-400 text-xs">
                         {new Date(e.start_time).toLocaleDateString("en-US", {
                           weekday: "short",
@@ -75,17 +121,21 @@ export default async function DashboardPage() {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                        {" · "}{e.sport.name}
+                        {" · "}
+                        {e.sport.name}
                       </p>
                     </div>
-                    <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                      e.event_type === "GAME"
-                        ? "bg-blue-900/40 text-blue-400"
-                        : e.event_type === "TOURNAMENT"
-                        ? "bg-purple-900/40 text-purple-400"
-                        : "bg-zinc-800 text-zinc-400"
-                    }`}>
-                      {e.event_type.charAt(0) + e.event_type.slice(1).toLowerCase()}
+                    <span
+                      className={`ml-auto shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        e.event_type === "GAME"
+                          ? "bg-blue-900/40 text-blue-400"
+                          : e.event_type === "TOURNAMENT"
+                            ? "bg-purple-900/40 text-purple-400"
+                            : "bg-zinc-800 text-zinc-400"
+                      }`}
+                    >
+                      {e.event_type.charAt(0) +
+                        e.event_type.slice(1).toLowerCase()}
                     </span>
                   </li>
                 ))}
@@ -100,12 +150,22 @@ export default async function DashboardPage() {
               My Teams
             </h2>
             {teams.length === 0 ? (
-              <p className="text-zinc-500 text-sm">You're not on any teams yet.</p>
+              <div>
+                <p className="text-zinc-500 text-sm mb-3">
+                  You&apos;re not on any teams yet.
+                </p>
+                <Link
+                  href="/dashboard/teams"
+                  className="text-[#00ff87] text-sm hover:underline font-medium"
+                >
+                  Browse teams →
+                </Link>
+              </div>
             ) : (
               <ul className="space-y-3">
                 {teams.map((t) => (
                   <li key={t.id} className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-sm text-[#00ff87]">
+                    <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-sm text-[#00ff87] shrink-0">
                       {t.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
@@ -122,19 +182,27 @@ export default async function DashboardPage() {
         {/* Stats strip */}
         <div className="grid grid-cols-3 gap-4 mt-6">
           {[
-            { label: "Events Organized", value: user?.organizedEvents?.length ?? 0 },
+            {
+              label: "Events Organized",
+              value: user?.organizedEvents?.length ?? 0,
+            },
             { label: "Teams", value: teams.length },
             { label: "Upcoming", value: upcomingEvents.length },
           ].map((s) => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">
-              <div className="text-3xl font-black text-[#00ff87]">{s.value}</div>
+            <div
+              key={s.label}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center"
+            >
+              <div className="text-3xl font-black text-[#00ff87]">
+                {s.value}
+              </div>
               <div className="text-zinc-400 text-xs mt-1">{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Quick links */}
-        <div className="mt-8 flex gap-3">
+        <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href="/dashboard/events/new"
             className="bg-[#00ff87] text-zinc-900 font-bold px-5 py-2.5 rounded-xl hover:bg-[#00e87a] transition text-sm"
@@ -143,9 +211,15 @@ export default async function DashboardPage() {
           </Link>
           <Link
             href="/dashboard/teams"
-            className="bg-zinc-800 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-zinc-700 transition text-sm"
+            className="bg-zinc-800 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-zinc-700 transition text-sm border border-zinc-700"
           >
             Browse Teams
+          </Link>
+          <Link
+            href="/dashboard/profile"
+            className="bg-zinc-800 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-zinc-700 transition text-sm border border-zinc-700"
+          >
+            My Profile
           </Link>
         </div>
       </main>

@@ -15,18 +15,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.error("authorize: missing credentials");
+            return null;
+          }
 
-        const email = credentials.email as string;
-        const password = credentials.password as string;
+          const email = credentials.email as string;
+          const password = credentials.password as string;
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user) {
+            console.error("authorize: no user found for email", email);
+            return null;
+          }
 
-        const valid = await verifyPassword(email, password);
-        if (!valid) return null;
+          if (!user.password_hash) {
+            console.error("authorize: user has no password (OAuth-only account)");
+            return null;
+          }
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+          const valid = await verifyPassword(email, password);
+          if (!valid) {
+            console.error("authorize: password mismatch for", email);
+            return null;
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
+        } catch (err) {
+          console.error("authorize: unexpected error", err);
+          return null;
+        }
       },
     }),
   ],
@@ -36,11 +60,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+      }
       return token;
     },
     async session({ session, token }) {
       if (token?.id) session.user.id = token.id as string;
+      if (token?.email) session.user.email = token.email as string;
       return session;
     },
   },

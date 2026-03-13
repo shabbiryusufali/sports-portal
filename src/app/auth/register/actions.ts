@@ -20,16 +20,23 @@ export async function registerWithCredentials(data: {
       return { success: false, message: "All fields are required." };
     }
     if (password.length < 8) {
-      return { success: false, message: "Password must be at least 8 characters." };
+      return {
+        success: false,
+        message: "Password must be at least 8 characters.",
+      };
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return { success: false, message: "An account with this email already exists." };
+      return {
+        success: false,
+        message: "An account with this email already exists.",
+      };
     }
 
     const password_hash = saltAndHashPassword(password);
-    const username = name.replaceAll(" ", "").toLowerCase() + Math.floor(Math.random() * 1000);
+    const username =
+      name.replaceAll(" ", "").toLowerCase() + Math.floor(Math.random() * 1000);
 
     await prisma.user.create({
       data: { name, email, password_hash, username },
@@ -38,7 +45,10 @@ export async function registerWithCredentials(data: {
     return { success: true };
   } catch (err) {
     console.error("registerWithCredentials error:", err);
-    return { success: false, message: "Something went wrong. Please try again." };
+    return {
+      success: false,
+      message: "Something went wrong. Please try again.",
+    };
   }
 }
 
