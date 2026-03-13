@@ -36,24 +36,27 @@ export default async function DashboardPage() {
         <Link href="/dashboard" className="text-xl font-black tracking-tighter">
           SPORTS<span className="text-[#00ff87]">PORTAL</span>
         </Link>
-        <div className="flex items-center gap-1">
-          <Link href="/dashboard/events/new" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
-            New Event
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/events" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition hidden sm:block">
+            Events
           </Link>
-          <Link href="/dashboard/teams" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
+          <Link href="/dashboard/teams" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition hidden sm:block">
             Teams
           </Link>
-          <Link href="/dashboard/profile" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
+          <Link href="/dashboard/leaderboards" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition hidden sm:block">
+            Leaderboards
+          </Link>
+          <Link href="/dashboard/profile" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition hidden sm:block">
             Profile
           </Link>
           {isAdmin && (
-            <Link href="/dashboard/admin" className="text-xs font-bold text-amber-400 bg-amber-400/10 hover:bg-amber-400/20 px-3 py-1.5 rounded-lg transition ml-1 hidden sm:block">
+            <Link href="/dashboard/admin" className="text-xs font-bold text-amber-400 bg-amber-400/10 hover:bg-amber-400/20 px-4 py-2 rounded-xl transition ml-1 hidden sm:block">
               ⚙ Admin
             </Link>
           )}
-          <div className="w-px h-5 bg-white/10 mx-2 hidden sm:block" />
+          <div className="w-px h-5 bg-white/10 mx-3 hidden sm:block" />
           <form action={async () => { "use server"; await signOut({ redirectTo: "/auth/login" }); }}>
-            <button className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition">
+            <button className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition">
               <span className="w-7 h-7 rounded-full bg-[#00ff87]/20 text-[#00ff87] text-xs font-bold flex items-center justify-center">
                 {initials}
               </span>
@@ -70,7 +73,7 @@ export default async function DashboardPage() {
             <p className="text-zinc-500 text-sm mb-1">Welcome back</p>
             <h1 className="text-3xl font-black tracking-tight">{displayName}</h1>
           </div>
-          <Link href="/dashboard/events/new" className="shrink-0 bg-[#00ff87] text-zinc-900 font-bold px-5 py-2.5 rounded-xl hover:bg-[#00e87a] active:scale-95 transition-all text-sm">
+          <Link href="/dashboard/events/new" className="shrink-0 bg-[#00ff87] text-zinc-900 font-bold px-6 py-3 rounded-xl hover:bg-[#00e87a] active:scale-95 transition-all text-sm">
             + New Event
           </Link>
         </div>
@@ -85,7 +88,7 @@ export default async function DashboardPage() {
                 <p className="text-zinc-500 text-xs mt-0.5">Required to join teams and participate in events.</p>
               </div>
             </div>
-            <Link href="/dashboard/profile" className="shrink-0 text-sm font-bold text-amber-400 border border-amber-400/30 px-4 py-2 rounded-xl hover:bg-amber-400/10 transition">
+            <Link href="/dashboard/profile" className="shrink-0 text-sm font-bold text-amber-400 border border-amber-400/30 px-5 py-2.5 rounded-xl hover:bg-amber-400/10 transition">
               Set up →
             </Link>
           </div>

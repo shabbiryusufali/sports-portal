@@ -1,6 +1,7 @@
 import { auth, signIn } from "@/api/auth/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AuthError } from "next-auth";
 
 export default async function LoginPage() {
   const session = await auth();
@@ -64,19 +65,33 @@ export default async function LoginPage() {
           </div>
 
           {/* Credentials */}
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const email = formData.get("email") as string;
-              const password = formData.get("password") as string;
-              await signIn("credentials", {
-                email,
-                password,
-                redirectTo: "/dashboard",
-              });
-            }}
-            className="space-y-4"
-          >
+         <form
+  action={async (formData) => {
+    "use server";
+
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      await signIn("credentials", {
+        email,
+        password,
+        redirectTo: "/dashboard",
+      });
+    } catch (error) {
+      if (error instanceof AuthError) {
+        switch (error.type) {
+          case "CredentialsSignin":
+            throw new Error("Invalid email or password.");
+          default:
+            throw new Error("Something went wrong.");
+        }
+      }
+
+      throw error;
+    }
+  }}
+>
             <div>
               <label
                 className="block text-xs font-medium text-zinc-400 mb-1.5"
