@@ -4,6 +4,7 @@ import { auth } from "@/api/auth/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { EventType } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 // ── Dashboard data ────────────────────────────────────────────────────────────
 
@@ -33,45 +34,59 @@ export async function getDashboardData() {
   });
 }
 
-// ── Create Event ──────────────────────────────────────────────────────────────
+// ── Create Event (teams optional) ─────────────────────────────────────────────
 
-export async function createEvent(form: FormData) {
+export async function createEvent(
+  form: FormData,
+): Promise<{ success: boolean; message?: string; id?: string }> {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Not authenticated");
+  if (!session?.user?.id) return { success: false, message: "Not authenticated" };
 
-  const team_id = String(form.get("teamId"));
-  const rawType = String(form.get("type")).toUpperCase() as EventType;
+  const sport_id = (form.get("sport_id") as string)?.trim();
+  const rawType = (String(form.get("type") ?? "PRACTICE")).toUpperCase() as EventType;
   const start = new Date(String(form.get("start")));
   const end = new Date(String(form.get("end")));
   const notes = (form.get("notes") as string) || null;
   const name = (form.get("name") as string)?.trim() || `${rawType} session`;
   const location = (form.get("location") as string) || null;
+  const description = (form.get("description") as string) || null;
+  const teamId = (form.get("team_id") as string) || null;
 
-  if (!team_id || !rawType || isNaN(start.getTime()) || isNaN(end.getTime())) {
-    throw new Error("Invalid input");
+  if (!sport_id) return { success: false, message: "Sport is required." };
+  if (isNaN(start.getTime()) || isNaN(end.getTime()))
+    return { success: false, message: "Invalid dates." };
+  if (end <= start) return { success: false, message: "End time must be after start time." };
+
+  const sport = await prisma.sport.findUnique({ where: { id: sport_id } });
+  if (!sport) return { success: false, message: "Sport not found." };
+
+  // If a team was provided, verify user is captain
+  if (teamId) {
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { captain_id: true },
+    });
+    if (!team) return { success: false, message: "Team not found." };
+    if (team.captain_id !== session.user.id)
+      return { success: false, message: "You must be team captain to add that team." };
   }
-  if (end <= start) throw new Error("End time must be after start time");
 
-  const team = await prisma.team.findUnique({
-    where: { id: team_id },
-    select: { sport_id: true },
-  });
-  if (!team) throw new Error("Team not found");
-
-  await prisma.event.create({
+  const event = await prisma.event.create({
     data: {
       name,
+      description,
       event_type: rawType,
       start_time: start,
       end_time: end,
       notes,
       location,
-      sport: { connect: { id: team.sport_id } },
+      sport: { connect: { id: sport_id } },
       organizer: { connect: { id: session.user.id } },
-      participants: { connect: { id: team_id } },
+      ...(teamId ? { participants: { connect: { id: teamId } } } : {}),
     },
   });
 
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/events/new");
+  revalidatePath("/dashboard/events");
+  return { success: true, id: event.id };
 }
