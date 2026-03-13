@@ -9,236 +9,182 @@ export default async function DashboardPage() {
 
   const user = await getDashboardData();
 
-  const upcomingEvents = [
+  const allEvents = [
     ...(user?.organizedEvents ?? []),
     ...(user?.player?.events ?? []),
-  ]
-    .filter((e) => new Date(e.start_time) >= new Date())
-    .sort(
-      (a, b) =>
-        new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
-    )
-    .slice(0, 5);
-
-  // Dedup by id
+  ];
   const seen = new Set<string>();
-  const dedupedEvents = upcomingEvents.filter((e) => {
-    if (seen.has(e.id)) return false;
-    seen.add(e.id);
-    return true;
-  });
+  const upcomingEvents = allEvents
+    .filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return new Date(e.start_time) >= new Date();
+    })
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 6);
 
   const teams = user?.player?.teams ?? [];
   const hasPlayerProfile = !!user?.player;
   const isAdmin = (user as any)?.is_admin ?? false;
+  const displayName = session.user?.name ?? session.user?.email ?? "Athlete";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#080810] text-white">
       {/* Nav */}
-      <nav className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
-        <span className="text-2xl font-black tracking-tighter">
+      <nav className="sticky top-0 z-10 backdrop-blur-md bg-[#080810]/90 border-b border-white/5 px-6 h-16 flex items-center justify-between">
+        <Link href="/dashboard" className="text-xl font-black tracking-tighter">
           SPORTS<span className="text-[#00ff87]">PORTAL</span>
-        </span>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/teams"
-            className="text-sm text-zinc-400 hover:text-white transition hidden sm:block"
-          >
-            Teams
-          </Link>
-          <Link
-            href="/dashboard/events/new"
-            className="text-sm text-zinc-400 hover:text-white transition hidden sm:block"
-          >
+        </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/dashboard/events/new" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
             New Event
           </Link>
-          {isAdmin && (
-            <Link
-              href="/dashboard/admin"
-              className="text-xs text-amber-400 border border-amber-700/40 bg-amber-900/20 px-2.5 py-1 rounded-full font-semibold hover:bg-amber-900/40 transition hidden sm:block"
-            >
-              Admin
-            </Link>
-          )}
-          <Link
-            href="/dashboard/profile"
-            className="text-sm text-zinc-400 hover:text-white transition hidden sm:block"
-          >
+          <Link href="/dashboard/teams" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
+            Teams
+          </Link>
+          <Link href="/dashboard/profile" className="text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition hidden sm:block">
             Profile
           </Link>
-          <span className="text-zinc-400 text-sm hidden sm:block">
-            {session.user?.name ?? session.user?.email}
-          </span>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/auth/login" });
-            }}
-          >
-            <button className="text-sm text-zinc-400 hover:text-white border border-zinc-700 rounded-lg px-3 py-1.5 hover:border-zinc-500 transition">
-              Sign out
+          {isAdmin && (
+            <Link href="/dashboard/admin" className="text-xs font-bold text-amber-400 bg-amber-400/10 hover:bg-amber-400/20 px-3 py-1.5 rounded-lg transition ml-1 hidden sm:block">
+              ⚙ Admin
+            </Link>
+          )}
+          <div className="w-px h-5 bg-white/10 mx-2 hidden sm:block" />
+          <form action={async () => { "use server"; await signOut({ redirectTo: "/auth/login" }); }}>
+            <button className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition">
+              <span className="w-7 h-7 rounded-full bg-[#00ff87]/20 text-[#00ff87] text-xs font-bold flex items-center justify-center">
+                {initials}
+              </span>
+              <span className="hidden sm:block">Sign out</span>
             </button>
           </form>
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        {/* Player profile nudge */}
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {/* Welcome */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-zinc-500 text-sm mb-1">Welcome back</p>
+            <h1 className="text-3xl font-black tracking-tight">{displayName}</h1>
+          </div>
+          <Link href="/dashboard/events/new" className="shrink-0 bg-[#00ff87] text-zinc-900 font-bold px-5 py-2.5 rounded-xl hover:bg-[#00e87a] active:scale-95 transition-all text-sm">
+            + New Event
+          </Link>
+        </div>
+
+        {/* Profile nudge */}
         {!hasPlayerProfile && (
-          <div className="mb-6 bg-amber-900/20 border border-amber-700/40 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-semibold text-amber-400 text-sm">
-                Complete your player profile
-              </p>
-              <p className="text-zinc-400 text-xs mt-0.5">
-                You need a player profile to join teams and participate in events.
-              </p>
+          <div className="bg-amber-400/5 border border-amber-400/20 rounded-2xl px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">⚠</div>
+              <div>
+                <p className="font-semibold text-amber-400 text-sm">Complete your player profile</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Required to join teams and participate in events.</p>
+              </div>
             </div>
-            <Link
-              href="/dashboard/profile"
-              className="shrink-0 text-sm font-bold text-amber-400 border border-amber-700/40 px-4 py-2 rounded-xl hover:bg-amber-900/30 transition"
-            >
+            <Link href="/dashboard/profile" className="shrink-0 text-sm font-bold text-amber-400 border border-amber-400/30 px-4 py-2 rounded-xl hover:bg-amber-400/10 transition">
               Set up →
             </Link>
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
           {[
-            { href: "/dashboard/events/new", label: "New Event", icon: "＋", color: "text-[#00ff87]" },
-            { href: "/dashboard/teams", label: "Teams", icon: "⚽", color: "text-blue-400" },
-            { href: "/dashboard/profile", label: "Profile", icon: "👤", color: "text-purple-400" },
-            ...(isAdmin ? [{ href: "/dashboard/admin", label: "Admin", icon: "⚙", color: "text-amber-400" }] : []),
-          ].map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-600 transition flex items-center gap-3"
-            >
-              <span className={`text-xl ${action.color}`}>{action.icon}</span>
-              <span className="text-sm font-medium">{action.label}</span>
-            </Link>
+            { label: "Events Organized", value: user?.organizedEvents?.length ?? 0, icon: "📅", color: "text-[#00ff87]" },
+            { label: "Teams", value: teams.length, icon: "⚽", color: "text-blue-400" },
+            { label: "Events Joined", value: user?.player?.events?.length ?? 0, icon: "🏆", color: "text-purple-400" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <p className="text-xl mb-3">{stat.icon}</p>
+              <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+              <p className="text-zinc-500 text-xs mt-1">{stat.label}</p>
+            </div>
           ))}
         </div>
 
-        {/* Content grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Two columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upcoming Events */}
-          <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00ff87] inline-block" />
-              Upcoming Events
-            </h2>
-            {dedupedEvents.length === 0 ? (
-              <div>
-                <p className="text-zinc-500 text-sm mb-3">No upcoming events.</p>
-                <Link
-                  href="/dashboard/events/new"
-                  className="text-[#00ff87] text-sm hover:underline font-medium"
-                >
-                  Create an event →
-                </Link>
+          <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+              <h2 className="font-bold flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
+                Upcoming Events
+              </h2>
+              <Link href="/dashboard/events/new" className="text-xs text-[#00ff87] hover:underline">+ New</Link>
+            </div>
+            {upcomingEvents.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-4xl mb-3">📅</p>
+                <p className="text-zinc-400 text-sm">No upcoming events</p>
+                <Link href="/dashboard/events/new" className="inline-block mt-3 text-[#00ff87] text-sm hover:underline">Create one →</Link>
               </div>
             ) : (
-              <ul className="space-y-3">
-                {dedupedEvents.map((e) => (
-                  <li key={e.id}>
-                    <Link
-                      href={`/dashboard/events/${e.id}`}
-                      className="flex items-center justify-between gap-3 hover:bg-zinc-800/50 rounded-xl px-2 py-2 -mx-2 transition group"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm group-hover:text-[#00ff87] transition truncate">
-                          {e.name}
-                        </p>
-                        <p className="text-zinc-500 text-xs">
-                          {new Date(e.start_time).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                      <span
-                        className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          e.event_type === "GAME"
-                            ? "bg-blue-900/40 text-blue-400"
-                            : e.event_type === "TOURNAMENT"
-                            ? "bg-purple-900/40 text-purple-400"
-                            : "bg-zinc-800 text-zinc-400"
-                        }`}
-                      >
-                        {e.event_type.charAt(0) + e.event_type.slice(1).toLowerCase()}
-                      </span>
-                    </Link>
-                  </li>
+              <div className="divide-y divide-white/[0.04]">
+                {upcomingEvents.map((e) => (
+                  <Link key={e.id} href={`/dashboard/events/${e.id}`} className="flex items-center gap-4 px-6 py-3.5 hover:bg-white/[0.03] transition group">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 ${
+                      e.event_type === "GAME" ? "bg-blue-500/10" :
+                      e.event_type === "TOURNAMENT" ? "bg-purple-500/10" : "bg-zinc-800"
+                    }`}>
+                      {e.event_type === "GAME" ? "⚡" : e.event_type === "TOURNAMENT" ? "🏆" : "🏃"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm group-hover:text-[#00ff87] transition truncate">{e.name}</p>
+                      <p className="text-zinc-500 text-xs mt-0.5">
+                        {new Date(e.start_time).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                        {" · "}
+                        {new Date(e.start_time).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      e.event_type === "GAME" ? "bg-blue-500/10 text-blue-400" :
+                      e.event_type === "TOURNAMENT" ? "bg-purple-500/10 text-purple-400" :
+                      "bg-zinc-800 text-zinc-400"
+                    }`}>
+                      {e.event_type.charAt(0) + e.event_type.slice(1).toLowerCase()}
+                    </span>
+                  </Link>
                 ))}
-              </ul>
+              </div>
             )}
           </section>
 
           {/* My Teams */}
-          <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00ff87] inline-block" />
-              My Teams
-            </h2>
+          <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+              <h2 className="font-bold flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-blue-400 rounded-full inline-block" />
+                My Teams
+              </h2>
+              <Link href="/dashboard/teams" className="text-xs text-blue-400 hover:underline">Browse</Link>
+            </div>
             {teams.length === 0 ? (
-              <div>
-                <p className="text-zinc-500 text-sm mb-3">
-                  You&apos;re not on any teams yet.
-                </p>
-                <Link
-                  href="/dashboard/teams"
-                  className="text-[#00ff87] text-sm hover:underline font-medium"
-                >
-                  Browse teams →
-                </Link>
+              <div className="px-6 py-12 text-center">
+                <p className="text-4xl mb-3">⚽</p>
+                <p className="text-zinc-400 text-sm">Not on any teams yet</p>
+                <Link href="/dashboard/teams" className="inline-block mt-3 text-blue-400 text-sm hover:underline">Browse teams →</Link>
               </div>
             ) : (
-              <ul className="space-y-3">
+              <div className="divide-y divide-white/[0.04]">
                 {teams.map((t) => (
-                  <li key={t.id} className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-sm text-[#00ff87] shrink-0">
+                  <div key={t.id} className="flex items-center gap-4 px-6 py-3.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xs text-[#00ff87] shrink-0">
                       {t.name.slice(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{t.name}</p>
-                      <p className="text-zinc-400 text-xs">{t.sport.name}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{t.name}</p>
+                      <p className="text-zinc-500 text-xs mt-0.5">{t.sport.name}</p>
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </section>
-        </div>
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-4 mt-6">
-          {[
-            {
-              label: "Events Organized",
-              value: user?.organizedEvents?.length ?? 0,
-            },
-            {
-              label: "Teams",
-              value: teams.length,
-            },
-            {
-              label: "Events Joined",
-              value: user?.player?.events?.length ?? 0,
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center"
-            >
-              <p className="text-3xl font-black text-[#00ff87]">{stat.value}</p>
-              <p className="text-zinc-400 text-xs mt-1">{stat.label}</p>
-            </div>
-          ))}
         </div>
       </main>
     </div>

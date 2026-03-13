@@ -17,76 +17,74 @@ export default async function EventPage({ params }: Props) {
 
   const { event, canManage, teamsInSport } = data;
 
-  const statusColor = {
-    SCHEDULED: "text-blue-400 bg-blue-900/30 border-blue-700/50",
-    ONGOING: "text-green-400 bg-green-900/30 border-green-700/50",
-    COMPLETED: "text-zinc-400 bg-zinc-800 border-zinc-700",
-    CANCELLED: "text-red-400 bg-red-900/30 border-red-700/50",
-  }[event.status];
+  const statusConfig = {
+    SCHEDULED: { label: "Scheduled", class: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+    ONGOING: { label: "Live", class: "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20" },
+    COMPLETED: { label: "Completed", class: "text-zinc-400 bg-zinc-800 border-zinc-700" },
+    CANCELLED: { label: "Cancelled", class: "text-red-400 bg-red-500/10 border-red-500/20" },
+  } as const satisfies Record<string, { label: string; class: string }>;
 
-  const typeColor = {
-    PRACTICE: "text-zinc-400",
-    GAME: "text-blue-400",
-    TOURNAMENT: "text-purple-400",
-  }[event.event_type];
+  const typeConfig = {
+    PRACTICE: { label: "Practice", icon: "🏃", class: "text-zinc-400 bg-zinc-800" },
+    GAME: { label: "Game", icon: "⚡", class: "text-blue-400 bg-blue-500/10" },
+    TOURNAMENT: { label: "Tournament", icon: "🏆", class: "text-purple-400 bg-purple-500/10" },
+  } as const satisfies Record<string, { label: string; icon: string; class: string }>;
+
+  const sc = statusConfig[event.status as keyof typeof statusConfig];
+  const tc = typeConfig[event.event_type as keyof typeof typeConfig];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <nav className="border-b border-zinc-800 px-6 py-4 flex items-center gap-4">
-        <Link href="/dashboard" className="text-zinc-400 hover:text-white text-sm transition">
+    <div className="min-h-screen bg-[#080810] text-white">
+      <nav className="sticky top-0 z-10 backdrop-blur-md bg-[#080810]/90 border-b border-white/5 px-6 h-16 flex items-center gap-3">
+        <Link href="/dashboard" className="text-zinc-500 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition text-sm"
+>
           ← Dashboard
         </Link>
-        <span className="text-zinc-700">/</span>
-        <span className="text-sm text-zinc-300 truncate">{event.name}</span>
+        <span className="text-white/10">/</span>
+        <span className="text-sm text-zinc-300 font-medium truncate max-w-xs">{event.name}</span>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-                  {event.status}
-                </span>
-                <span className={`text-xs font-medium ${typeColor}`}>
-                  {event.event_type.charAt(0) + event.event_type.slice(1).toLowerCase()}
-                </span>
-              </div>
-              <h1 className="text-3xl font-black tracking-tight">{event.name}</h1>
-              <p className="text-zinc-400 text-sm mt-1">{event.sport.name}</p>
-            </div>
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${sc.class}`}>
+              {event.status === "ONGOING" && <span className="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-pulse" />}
+              {sc.label}
+            </span>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${tc.class}`}>
+              {tc.icon} {tc.label}
+            </span>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-            {[
-              {
-                label: "Start",
-                value: new Date(event.start_time).toLocaleString(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }),
-              },
-              {
-                label: "End",
-                value: new Date(event.end_time).toLocaleString(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }),
-              },
-              { label: "Location", value: event.location ?? "TBD" },
-              { label: "Organizer", value: event.organizer.name ?? event.organizer.email },
-            ].map((item) => (
-              <div key={item.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-                <p className="text-xs text-zinc-500 mb-1">{item.label}</p>
-                <p className="text-sm font-medium text-white truncate">{item.value}</p>
-              </div>
-            ))}
-          </div>
-
+          <h1 className="text-4xl font-black tracking-tight mb-1">{event.name}</h1>
+          <p className="text-zinc-500">{event.sport.name}</p>
           {event.description && (
-            <p className="mt-4 text-zinc-400 text-sm leading-relaxed">{event.description}</p>
+            <p className="text-zinc-400 text-sm mt-3 leading-relaxed max-w-2xl">{event.description}</p>
           )}
+        </div>
+
+        {/* Meta grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            {
+              icon: "🗓",
+              label: "Start",
+              value: new Date(event.start_time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
+            },
+            {
+              icon: "⏱",
+              label: "End",
+              value: new Date(event.end_time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
+            },
+            { icon: "📍", label: "Location", value: event.location ?? "TBD" },
+            { icon: "👤", label: "Organizer", value: event.organizer.name ?? event.organizer.email },
+          ].map((item) => (
+            <div key={item.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+              <p className="text-lg mb-1">{item.icon}</p>
+              <p className="text-zinc-500 text-xs mb-1">{item.label}</p>
+              <p className="text-sm font-semibold truncate">{item.value}</p>
+            </div>
+          ))}
         </div>
 
         {/* Interactive section */}

@@ -12,6 +12,11 @@ interface Props {
   captainOfTeams: Team[];
 }
 
+const inputClass =
+  "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-[#00ff87]/50 focus:bg-white/[0.06] transition";
+
+const labelClass = "block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2";
+
 export default function NewEventClient({ sports, captainOfTeams }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -33,107 +38,84 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
   }
 
   return (
-    <form action={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
-      {/* Event Name */}
-      <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Event Name</label>
-        <input
-          name="name"
-          required
-          placeholder="e.g. Friday Night Tournament"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-        />
-      </div>
+    <form action={handleSubmit} className="space-y-6">
+      {/* Name */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 space-y-5">
+        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Event Details</h2>
 
-      {/* Sport */}
-      <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Sport</label>
-        {sports.length === 0 ? (
-          <p className="text-zinc-500 text-sm">No sports available. Ask an admin to add some.</p>
-        ) : (
-          <select
-            name="sport_id"
-            required
-            value={selectedSport}
-            onChange={(e) => setSelectedSport(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-          >
-            <option value="">Select a sport…</option>
-            {sports.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {/* Event Type */}
-      <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Event Type</label>
-        <select
-          name="type"
-          defaultValue="PRACTICE"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-        >
-          <option value="PRACTICE">Practice</option>
-          <option value="GAME">Game</option>
-          <option value="TOURNAMENT">Tournament</option>
-        </select>
-      </div>
-
-      {/* Dates */}
-      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Start</label>
-          <input
-            type="datetime-local"
-            name="start"
-            required
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-          />
+          <label className={labelClass}>Event Name</label>
+          <input name="name" required placeholder="e.g. Friday Night Tournament" className={inputClass} />
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Sport</label>
+            {sports.length === 0 ? (
+              <p className="text-zinc-600 text-sm py-3">No sports yet — ask an admin to add some.</p>
+            ) : (
+              <select
+                name="sport_id"
+                required
+                value={selectedSport}
+                onChange={(e) => setSelectedSport(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Select sport…</option>
+                {sports.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div>
+            <label className={labelClass}>Type</label>
+            <select name="type" defaultValue="PRACTICE" className={inputClass}>
+              <option value="PRACTICE">Practice</option>
+              <option value="GAME">Game</option>
+              <option value="TOURNAMENT">Tournament</option>
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">End</label>
-          <input
-            type="datetime-local"
-            name="end"
-            required
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
+          <label className={labelClass}>Location</label>
+          <input name="location" placeholder="e.g. Main Stadium, Field 3" className={inputClass} />
+        </div>
+
+        <div>
+          <label className={labelClass}>Description</label>
+          <textarea
+            name="description"
+            rows={3}
+            placeholder="Optional details about the event…"
+            className={`${inputClass} resize-none`}
           />
         </div>
       </div>
 
-      {/* Location */}
-      <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Location</label>
-        <input
-          name="location"
-          placeholder="e.g. Main Stadium, Field 3"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Description</label>
-        <textarea
-          name="description"
-          rows={3}
-          placeholder="Optional details about the event…"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition resize-none"
-        />
+      {/* Schedule */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 space-y-5">
+        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Schedule</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Starts</label>
+            <input type="datetime-local" name="start" required className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Ends</label>
+            <input type="datetime-local" name="end" required className={inputClass} />
+          </div>
+        </div>
       </div>
 
       {/* Optional team */}
       {selectedSport && teamsForSport.length > 0 && (
-        <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-            Add Your Team <span className="text-zinc-600">(optional)</span>
-          </label>
-          <select
-            name="team_id"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ff87] transition"
-          >
-            <option value="">No team (open event)</option>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
+          <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest mb-5">Your Team</h2>
+          <label className={labelClass}>Add a Team <span className="normal-case text-zinc-600 font-normal">(optional)</span></label>
+          <select name="team_id" className={inputClass}>
+            <option value="">No team — open event</option>
             {teamsForSport.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -142,17 +124,17 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
       )}
 
       {error && (
-        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
           {error}
-        </p>
+        </div>
       )}
 
       <button
         type="submit"
         disabled={pending || sports.length === 0}
-        className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        className="w-full bg-[#00ff87] text-zinc-900 font-bold py-3.5 rounded-xl hover:bg-[#00e87a] active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
       >
-        {pending ? "Creating…" : "Create Event"}
+        {pending ? "Creating event…" : "Create Event"}
       </button>
     </form>
   );
