@@ -8,18 +8,18 @@ export default async function SignOut() {
       action={async () => {
         "use server";
         if (session?.user) {
-          await signOut();
+          await signOut({ redirectTo: "/" });
         } else {
           redirect("/auth/login");
         }
       }}
-      className="inline-block ml-4"
+      className="inline-block"
     >
       <button
         type="submit"
-        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        className="px-4 py-2 text-sm font-semibold bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 border border-zinc-700 transition"
       >
-        {session?.user?.email ? "Sign out" : "Sign in"}
+        {session?.user ? "Sign out" : "Sign in"}
       </button>
     </form>
   );
