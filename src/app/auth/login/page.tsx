@@ -3,14 +3,34 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AuthError } from "next-auth";
 
-export default async function LoginPage() {
+// Map NextAuth error codes → human-readable messages shown in the UI.
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  CredentialsSignin: "Invalid email or password.",
+  OAuthAccountNotLinked:
+    "This email is already linked to another sign-in method.",
+  OAuthSignin: "Could not sign in with Google. Please try again.",
+  OAuthCallback: "OAuth callback error. Please try again.",
+  Default: "Something went wrong. Please try again.",
+};
+
+interface Props {
+  searchParams?: Promise<{ error?: string; callbackUrl?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: Props) {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
+
+  const params = await (searchParams ?? Promise.resolve({error : ""}));
+  const errorKey = params.error ?? "";
+  const errorMsg = errorKey
+    ? (AUTH_ERROR_MESSAGES[errorKey] ?? AUTH_ERROR_MESSAGES.Default)
+    : null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo / Heading */}
+        {/* Logo */}
         <div className="text-center mb-10">
           <span className="inline-block text-4xl font-black tracking-tighter text-white">
             SPORTS<span className="text-[#00ff87]">PORTAL</span>
@@ -22,6 +42,13 @@ export default async function LoginPage() {
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
           <h1 className="text-xl font-bold text-white mb-6">Sign in</h1>
+
+          {/* Error banner */}
+          {errorMsg && (
+            <div className="mb-5 bg-red-900/30 border border-red-700 text-red-400 text-sm px-4 py-3 rounded-lg">
+              {errorMsg}
+            </div>
+          )}
 
           {/* Google */}
           <form
@@ -64,34 +91,45 @@ export default async function LoginPage() {
             <div className="flex-1 h-px bg-zinc-700" />
           </div>
 
-          {/* Credentials */}
-         <form
-  action={async (formData) => {
-    "use server";
+          {/* Credentials form ──────────────────────────────────────────────
+              On failure NextAuth redirects back to /auth/login?error=<code>.
+              We never throw from the action so Next.js never crashes the page.
+          ─────────────────────────────────────────────────────────────────── */}
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              const email = formData.get("email") as string;
+              const password = formData.get("password") as string;
 
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+              try {
+                await signIn("credentials", {
+                  email,
+                  password,
+                  redirectTo: "/dashboard",
+                });
+              } catch (error) {
+                // signIn throws a NEXT_REDIRECT for successful redirects — re-throw those.
+                if (
+                  error instanceof Error &&
+                  (error as any).digest?.startsWith("NEXT_REDIRECT")
+                ) {
+                  throw error;
+                }
 
-    try {
-      await signIn("credentials", {
-        email,
-        password,
-        redirectTo: "/dashboard",
-      });
-    } catch (error) {
-      if (error instanceof AuthError) {
-        switch (error.type) {
-          case "CredentialsSignin":
-            throw new Error("Invalid email or password.");
-          default:
-            throw new Error("Something went wrong.");
-        }
-      }
+                // Map NextAuth AuthError codes to URL-safe query params.
+                if (error instanceof AuthError) {
+                  const code =
+                    error.type === "CredentialsSignin"
+                      ? "CredentialsSignin"
+                      : "Default";
+                  redirect(`/auth/login?error=${code}`);
+                }
 
-      throw error;
-    }
-  }}
->
+                redirect("/auth/login?error=Default");
+              }
+            }}
+            className="space-y-4"
+          >
             <div>
               <label
                 className="block text-xs font-medium text-zinc-400 mb-1.5"
@@ -109,13 +147,22 @@ export default async function LoginPage() {
                 placeholder="you@example.com"
               />
             </div>
+
             <div>
-              <label
-                className="block text-xs font-medium text-zinc-400 mb-1.5"
-                htmlFor="password"
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  className="block text-xs font-medium text-zinc-400"
+                  htmlFor="password"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-zinc-500 hover:text-[#00ff87] transition"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="password"
                 name="password"
@@ -126,6 +173,7 @@ export default async function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
+
             <button
               type="submit"
               className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition mt-2"

@@ -1,30 +1,14 @@
 "use server";
 
-import { auth } from "@/api/auth/auth";
 import { prisma } from "@/lib/db";
+import { auth } from "@/api/auth/auth";
 import { revalidatePath } from "next/cache";
-import { Status, MatchType } from "@prisma/client";
-
-async function requireOrganizerOrAdmin(eventId: string) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Not authenticated");
-
-  const [event, user] = await Promise.all([
-    prisma.event.findUnique({ where: { id: eventId }, select: { organizer_id: true } }),
-    prisma.user.findUnique({ where: { id: session.user.id }, select: { is_admin: true } }),
-  ]);
-
-  if (!event) throw new Error("Event not found");
-  if (event.organizer_id !== session.user.id && !user?.is_admin) {
-    throw new Error("Not authorized");
-  }
-  return session.user.id;
-}
 
 // ── Get full event data ───────────────────────────────────────────────────────
 
 export async function getEventData(id: string) {
   const session = await auth();
+  if (!session?.user) return null;
   if (!session?.user?.id) return null;
 
   const [event, user] = await Promise.all([
@@ -39,11 +23,11 @@ export async function getEventData(id: string) {
             _count: { select: { members: true } },
           },
         },
+        players: {
+          select: { id: true, first_name: true, last_name: true },
+        },
         matches: {
-          include: {
-            team_a: true,
-            team_b: true,
-          },
+          include: { team_a: true, team_b: true },
           orderBy: { match_date: "asc" },
         },
       },
@@ -56,20 +40,49 @@ export async function getEventData(id: string) {
 
   if (!event) return null;
 
-  // Teams in this sport (for adding matches)
   const teamsInSport = await prisma.team.findMany({
     where: { sport_id: event.sport_id, is_active: true },
     orderBy: { name: "asc" },
   });
 
-  const isOrganizer = event.organizer_id === session.user.id;
-  const isAdmin = user?.is_admin ?? false;
-  const canManage = isOrganizer || isAdmin;
+  const canManage = event.organizer_id === session.user.id || (user?.is_admin ?? false);
 
-  return { event, canManage, teamsInSport, currentUserId: session.user.id };
+  const playerProfile = await prisma.player.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  const hasPlayerProfile = !!playerProfile;
+  const isJoined = event.players.some((p) => p.id === session.user.id);
+
+  return {
+    event,
+    canManage,
+    teamsInSport,
+    currentUserId: session.user.id,
+    hasPlayerProfile,
+    isJoined,
+  };
 }
 
-// ── Add team to event ─────────────────────────────────────────────────────────
+// ── Auth guard ────────────────────────────────────────────────────────────────
+
+async function requireOrganizerOrAdmin(eventId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) throw new Error("Event not found");
+
+  const isAdmin = await prisma.user
+    .findUnique({ where: { id: session.user.id } })
+    .then((u) => u?.is_admin ?? false);
+
+  if (!isAdmin && event.organizer_id !== session.user.id) {
+    throw new Error("Not authorized");
+  }
+}
+
+// ── Teams ─────────────────────────────────────────────────────────────────────
 
 export async function addTeamToEvent(
   eventId: string,
@@ -88,8 +101,6 @@ export async function addTeamToEvent(
   }
 }
 
-// ── Remove team from event ────────────────────────────────────────────────────
-
 export async function removeTeamFromEvent(
   eventId: string,
   teamId: string,
@@ -107,39 +118,43 @@ export async function removeTeamFromEvent(
   }
 }
 
-// ── Add match to event ────────────────────────────────────────────────────────
+// ── Matches ───────────────────────────────────────────────────────────────────
 
 export async function addMatch(
   eventId: string,
-  form: FormData,
+  data: {
+    teamAId: string;
+    teamBId: string;
+    matchDate: string;
+    matchType: "FRIENDLY" | "TOURNAMENT";
+  },
 ): Promise<{ success: boolean; message?: string }> {
   try {
     await requireOrganizerOrAdmin(eventId);
 
-    const team_a_id = form.get("team_a_id") as string;
-    const team_b_id = form.get("team_b_id") as string;
-    const match_date_str = form.get("match_date") as string;
-    const match_type = (form.get("match_type") as MatchType) ?? "FRIENDLY";
-
-    if (!team_a_id || !team_b_id) throw new Error("Both teams are required");
-    if (team_a_id === team_b_id) throw new Error("Teams must be different");
+    if (!data.teamAId || !data.teamBId)
+      throw new Error("Both teams are required.");
+    if (data.teamAId === data.teamBId)
+      throw new Error("Teams must be different.");
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: { sport_id: true, start_time: true },
     });
-    if (!event) throw new Error("Event not found");
+    if (!event) throw new Error("Event not found.");
 
-    const match_date = match_date_str ? new Date(match_date_str) : event.start_time;
+    const match_date = data.matchDate
+      ? new Date(data.matchDate)
+      : event.start_time;
 
     await prisma.match.create({
       data: {
-        sport: { connect: { id: event.sport_id } },
-        team_a: { connect: { id: team_a_id } },
-        team_b: { connect: { id: team_b_id } },
+        event_id: eventId,
+        team_a_id: data.teamAId,
+        team_b_id: data.teamBId,
         match_date,
-        event: { connect: { id: eventId } },
-        match_type,
+        match_type: data.matchType,
+        sport_id: event.sport_id,
       },
     });
 
@@ -150,7 +165,7 @@ export async function addMatch(
   }
 }
 
-// ── Start match ───────────────────────────────────────────────────────────────
+// ── Match lifecycle ───────────────────────────────────────────────────────────
 
 export async function startMatch(
   matchId: string,
@@ -162,7 +177,6 @@ export async function startMatch(
       where: { id: matchId },
       data: { status: "ONGOING" },
     });
-    // Also set event to ongoing if it's still scheduled
     await prisma.event.updateMany({
       where: { id: eventId, status: "SCHEDULED" },
       data: { status: "ONGOING" },
@@ -174,7 +188,7 @@ export async function startMatch(
   }
 }
 
-// ── Score a goal ──────────────────────────────────────────────────────────────
+// ── Score a goal (increment by 1) ─────────────────────────────────────────────
 
 export async function scoreGoal(
   matchId: string,
@@ -201,7 +215,7 @@ export async function scoreGoal(
   }
 }
 
-// ── Undo last score ───────────────────────────────────────────────────────────
+// ── Undo last score (decrement by 1) ─────────────────────────────────────────
 
 export async function undoScore(
   matchId: string,
@@ -215,7 +229,8 @@ export async function undoScore(
     if (match.status !== "ONGOING") throw new Error("Match is not ongoing");
 
     const currentScore = team === "a" ? match.score_team_a : match.score_team_b;
-    if (currentScore <= 0) return { success: false, message: "Score already at 0" };
+    if (currentScore <= 0)
+      return { success: false, message: "Score already at 0" };
 
     await prisma.match.update({
       where: { id: matchId },
@@ -223,6 +238,48 @@ export async function undoScore(
         team === "a"
           ? { score_team_a: { decrement: 1 } }
           : { score_team_b: { decrement: 1 } },
+    });
+    revalidatePath(`/dashboard/events/${eventId}`);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+}
+
+// ── Set score directly (overwrite both values) ────────────────────────────────
+//
+// Works on ONGOING and COMPLETED matches so admins/organisers can correct
+// scores after the fact.
+
+export async function setScore(
+  matchId: string,
+  eventId: string,
+  scoreA: number,
+  scoreB: number,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    await requireOrganizerOrAdmin(eventId);
+
+    if (
+      !Number.isInteger(scoreA) ||
+      !Number.isInteger(scoreB) ||
+      scoreA < 0 ||
+      scoreB < 0
+    ) {
+      throw new Error("Scores must be non-negative integers.");
+    }
+
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) throw new Error("Match not found");
+    if (match.status === "CANCELLED")
+      throw new Error("Cannot edit scores of a cancelled match.");
+
+    await prisma.match.update({
+      where: { id: matchId },
+      data: {
+        score_team_a: scoreA,
+        score_team_b: scoreB,
+      },
     });
     revalidatePath(`/dashboard/events/${eventId}`);
     return { success: true };
@@ -269,17 +326,81 @@ export async function cancelMatch(
   }
 }
 
-// ── Update event status ───────────────────────────────────────────────────────
+// ── Event status ──────────────────────────────────────────────────────────────
 
 export async function updateEventStatus(
   eventId: string,
-  status: Status,
+  status: "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED",
 ): Promise<{ success: boolean; message?: string }> {
   try {
     await requireOrganizerOrAdmin(eventId);
     await prisma.event.update({ where: { id: eventId }, data: { status } });
     revalidatePath(`/dashboard/events/${eventId}`);
-    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+}
+
+// ── Join / Leave event (individual player) ────────────────────────────────────
+
+export async function joinEvent(
+  eventId: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Not authenticated");
+    if (!session?.user?.id) throw new Error("Not authenticated");
+
+    const player = await prisma.player.findUnique({
+      where: { id: session.user.id },
+    });
+    if (!player)
+      throw new Error(
+        "You need a player profile to join events. Set one up on your profile page.",
+      );
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        status: true,
+        registration_deadline: true,
+        players: { select: { id: true } },
+      },
+    });
+    if (!event) throw new Error("Event not found.");
+    if (event.status === "COMPLETED" || event.status === "CANCELLED")
+      throw new Error("This event is no longer open for registration.");
+    if (event.registration_deadline && new Date() > event.registration_deadline)
+      throw new Error("The registration deadline has passed.");
+    if (event.players.some((p) => p.id === session.user.id))
+      throw new Error("You have already joined this event.");
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { players: { connect: { id: session.user.id } } },
+    });
+
+    revalidatePath(`/dashboard/events/${eventId}`);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+}
+
+export async function leaveEvent(
+  eventId: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Not authenticated");
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { players: { disconnect: { id: session.user.id } } },
+    });
+
+    revalidatePath(`/dashboard/events/${eventId}`);
     return { success: true };
   } catch (e: any) {
     return { success: false, message: e.message };
