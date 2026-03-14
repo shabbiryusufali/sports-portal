@@ -5,17 +5,9 @@ import { useRouter } from "next/navigation";
 import { createEvent } from "@/app/dashboard/actions";
 
 type Sport = { id: string; name: string; description: string | null };
-type Team = { id: string; name: string; sport: Sport };
+type Team  = { id: string; name: string; sport: Sport };
 
-interface Props {
-  sports: Sport[];
-  captainOfTeams: Team[];
-}
-
-const inputClass =
-  "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-[#00ff87]/50 focus:bg-white/[0.06] transition";
-
-const labelClass = "block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2";
+interface Props { sports: Sport[]; captainOfTeams: Team[]; }
 
 export default function NewEventClient({ sports, captainOfTeams }: Props) {
   const router = useRouter();
@@ -29,48 +21,46 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
     setError(null);
     start(async () => {
       const res = await createEvent(fd);
-      if (!res.success) {
-        setError(res.message ?? "Failed to create event.");
-      } else {
-        router.push(`/dashboard/events/${res.id}`);
-      }
+      if (!res.success) setError(res.message ?? "Failed to create event.");
+      else router.push(`/dashboard/events/${res.id}`);
     });
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      {/* Name */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 space-y-5">
-        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Event Details</h2>
+    <form action={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {error && <div className="sp-notice sp-notice-err">{error}</div>}
+
+      {/* Event details */}
+      <div className="sp-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <p className="sp-section-title">Event Details</p>
 
         <div>
-          <label className={labelClass}>Event Name</label>
-          <input name="name" required placeholder="e.g. Friday Night Tournament" className={inputClass} />
+          <label className="sp-label">Event Name</label>
+          <input name="name" required placeholder="e.g. Friday Night Tournament" className="sp-input" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div>
-            <label className={labelClass}>Sport</label>
+            <label className="sp-label">Sport</label>
             {sports.length === 0 ? (
-              <p className="text-zinc-600 text-sm py-3">No sports yet — ask an admin to add some.</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>No sports available yet.</p>
             ) : (
               <select
                 name="sport_id"
                 required
                 value={selectedSport}
                 onChange={(e) => setSelectedSport(e.target.value)}
-                className={inputClass}
+                className="sp-input"
+                style={{ appearance: "auto" }}
               >
-                <option value="">Select sport…</option>
-                {sports.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                <option value="">Select…</option>
+                {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             )}
           </div>
           <div>
-            <label className={labelClass}>Type</label>
-            <select name="type" defaultValue="PRACTICE" className={inputClass}>
+            <label className="sp-label">Event Type</label>
+            <select name="event_type" required className="sp-input" style={{ appearance: "auto" }}>
               <option value="PRACTICE">Practice</option>
               <option value="GAME">Game</option>
               <option value="TOURNAMENT">Tournament</option>
@@ -79,62 +69,71 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
         </div>
 
         <div>
-          <label className={labelClass}>Location</label>
-          <input name="location" placeholder="e.g. Main Stadium, Field 3" className={inputClass} />
-        </div>
-
-        <div>
-          <label className={labelClass}>Description</label>
-          <textarea
-            name="description"
-            rows={3}
-            placeholder="Optional details about the event…"
-            className={`${inputClass} resize-none`}
-          />
+          <label className="sp-label">Description <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <textarea name="description" placeholder="Add details about this event…" rows={3} className="sp-input" style={{ resize: "vertical", minHeight: 80 }} />
         </div>
       </div>
 
-      {/* Schedule */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 space-y-5">
-        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Schedule</h2>
-        <div className="grid grid-cols-2 gap-4">
+      {/* Schedule & location */}
+      <div className="sp-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <p className="sp-section-title">Schedule & Location</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div>
-            <label className={labelClass}>Starts</label>
-            <input type="datetime-local" name="start" required className={inputClass} />
+            <label className="sp-label">Start Time</label>
+            <input name="start_time" type="datetime-local" required className="sp-input" />
           </div>
           <div>
-            <label className={labelClass}>Ends</label>
-            <input type="datetime-local" name="end" required className={inputClass} />
+            <label className="sp-label">End Time</label>
+            <input name="end_time" type="datetime-local" required className="sp-input" />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div>
+            <label className="sp-label">Location <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+            <input name="location" placeholder="e.g. Sports Centre, Field 3" className="sp-input" />
+          </div>
+          <div>
+            <label className="sp-label">Registration Deadline <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+            <input name="registration_deadline" type="datetime-local" className="sp-input" />
           </div>
         </div>
       </div>
 
-      {/* Optional team */}
-      {selectedSport && teamsForSport.length > 0 && (
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
-          <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest mb-5">Your Team</h2>
-          <label className={labelClass}>Add a Team <span className="normal-case text-zinc-600 font-normal">(optional)</span></label>
-          <select name="team_id" className={inputClass}>
-            <option value="">No team — open event</option>
-            {teamsForSport.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+      {/* Teams */}
+      {captainOfTeams.length > 0 && (
+        <div className="sp-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <p className="sp-section-title">Your Team <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></p>
+          {selectedSport && teamsForSport.length === 0 ? (
+            <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>None of your teams play this sport.</p>
+          ) : (
+            <div>
+              <label className="sp-label">Add your team to this event</label>
+              <select name="team_id" className="sp-input" style={{ appearance: "auto" }}>
+                <option value="">None</option>
+                {(selectedSport ? teamsForSport : captainOfTeams).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
+      {/* Visibility */}
+      <div className="sp-card" style={{ padding: "20px 24px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+          <input name="is_public" type="checkbox" value="true" style={{ width: 18, height: 18, accentColor: "var(--accent)" }} />
+          <div>
+            <p style={{ fontWeight: 600, fontSize: "0.9rem" }}>Make event public</p>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: 2 }}>Public events are visible to all users.</p>
+          </div>
+        </label>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending || sports.length === 0}
-        className="w-full bg-[#00ff87] text-zinc-900 font-bold py-3.5 rounded-xl hover:bg-[#00e87a] active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-      >
-        {pending ? "Creating event…" : "Create Event"}
+      <button type="submit" disabled={pending} className="sp-btn-primary" style={{ alignSelf: "flex-start", padding: "12px 28px", fontSize: "0.9375rem" }}>
+        {pending ? "Creating…" : "Create Event"}
       </button>
     </form>
   );

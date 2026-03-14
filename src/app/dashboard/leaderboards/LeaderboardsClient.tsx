@@ -4,69 +4,36 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 
 type Sport = { id: string; name: string; is_team_sport: boolean };
-
 type TeamStat = {
   id: string; name: string; sport: Sport; memberCount: number;
   played: number; wins: number; losses: number; draws: number;
   points: number; goalsFor: number; goalsAgainst: number; goalDiff: number; winRate: number;
 };
-
 type PlayerStat = {
   id: string; name: string; sport: Sport;
   played: number; wins: number; losses: number; draws: number;
   points: number; scoresFor: number; scoresAgainst: number; scoreDiff: number; winRate: number;
 };
-
-interface Props {
-  teams: TeamStat[];
-  players?: PlayerStat[];
-  sports: Sport[];
-}
-
-const selectClass = "bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00ff87]/50 transition";
+interface Props { teams: TeamStat[]; players?: PlayerStat[]; sports: Sport[]; }
 
 export default function LeaderboardsClient({ teams, players = [], sports }: Props) {
-  const [mode, setMode]           = useState<"teams" | "players">("teams");
+  const [mode, setMode] = useState<"teams" | "players">("teams");
   const [sportFilter, setSportFilter] = useState("all");
-  const [sortBy, setSortBy]       = useState<"points" | "winRate" | "goalsFor" | "played">("points");
+  const [sortBy, setSortBy] = useState<"points" | "winRate" | "goalsFor" | "played">("points");
 
-  function switchMode(next: "teams" | "players") {
-    setMode(next);
-    setSportFilter("all");
-    setSortBy("points");
-  }
+  function switchMode(next: "teams" | "players") { setMode(next); setSportFilter("all"); setSortBy("points"); }
 
-  // FIX: only show sports relevant to the current mode
-  const filteredSports = useMemo(() =>
-    sports.filter((s) => mode === "teams" ? s.is_team_sport : !s.is_team_sport),
-    [sports, mode],
-  );
+  const filteredSports = useMemo(() => sports.filter((s) => mode === "teams" ? s.is_team_sport : !s.is_team_sport), [sports, mode]);
 
-  const filteredTeams = useMemo(() =>
-    teams
-      .filter((t) => sportFilter === "all" || t.sport.id === sportFilter)
-      .filter((t) => t.played > 0)
-      .sort((a, b) => {
-        if (sortBy === "points")   return b.points - a.points || b.goalDiff - a.goalDiff;
-        if (sortBy === "winRate")  return b.winRate - a.winRate;
-        if (sortBy === "goalsFor") return b.goalsFor - a.goalsFor;
-        return b.played - a.played;
-      }),
-    [teams, sportFilter, sortBy],
-  );
+  const filteredTeams = useMemo(() => teams
+    .filter((t) => (sportFilter === "all" || t.sport.id === sportFilter) && t.played > 0)
+    .sort((a, b) => sortBy === "points" ? b.points - a.points || b.goalDiff - a.goalDiff : sortBy === "winRate" ? b.winRate - a.winRate : sortBy === "goalsFor" ? b.goalsFor - a.goalsFor : b.played - a.played),
+    [teams, sportFilter, sortBy]);
 
-  const filteredPlayers = useMemo(() =>
-    players
-      .filter((p) => sportFilter === "all" || p.sport.id === sportFilter)
-      .filter((p) => p.played > 0)
-      .sort((a, b) => {
-        if (sortBy === "points")   return b.points - a.points || b.scoreDiff - a.scoreDiff;
-        if (sortBy === "winRate")  return b.winRate - a.winRate;
-        if (sortBy === "goalsFor") return b.scoresFor - a.scoresFor;
-        return b.played - a.played;
-      }),
-    [players, sportFilter, sortBy],
-  );
+  const filteredPlayers = useMemo(() => players
+    .filter((p) => (sportFilter === "all" || p.sport.id === sportFilter) && p.played > 0)
+    .sort((a, b) => sortBy === "points" ? b.points - a.points || b.scoreDiff - a.scoreDiff : sortBy === "winRate" ? b.winRate - a.winRate : sortBy === "goalsFor" ? b.scoresFor - a.scoresFor : b.played - a.played),
+    [players, sportFilter, sortBy]);
 
   const teamGroups = useMemo(() => {
     if (sportFilter !== "all") return null;
@@ -82,140 +49,133 @@ export default function LeaderboardsClient({ teams, players = [], sports }: Prop
     return Object.keys(g).length ? g : null;
   }, [filteredPlayers, sportFilter]);
 
-  const sortOptions: { value: typeof sortBy; label: string }[] = [
-    { value: "points",   label: "Points" },
-    { value: "winRate",  label: "Win Rate" },
-    { value: "goalsFor", label: mode === "teams" ? "Goals Scored" : "Points Scored" },
-    { value: "played",   label: "Most Active" },
-  ];
-
-  const isEmpty = mode === "teams" ? filteredTeams.length === 0 : filteredPlayers.length === 0;
+  const rankColor = (r: number) => r === 1 ? "#fbbf24" : r === 2 ? "#d1d5db" : r === 3 ? "#b45309" : "var(--text-muted)";
 
   function TeamTable({ rows, startRank = 1 }: { rows: TeamStat[]; startRank?: number }) {
     return (
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[2rem_1fr_repeat(6,4rem)] px-6 py-3 border-b border-white/[0.06] text-xs font-bold text-zinc-600 uppercase tracking-wider">
+      <div className="sp-card" style={{ overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ display: "grid", gridTemplateColumns: "2rem 1fr repeat(6, 3.5rem)", padding: "10px 20px", borderBottom: "1px solid var(--border)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>
           <span>#</span><span>Team</span>
-          <span className="text-center">P</span><span className="text-center">W</span>
-          <span className="text-center">D</span><span className="text-center">L</span>
-          <span className="text-center">GD</span><span className="text-center text-zinc-400">Pts</span>
+          <span style={{ textAlign: "center" }}>P</span>
+          <span style={{ textAlign: "center" }}>W</span>
+          <span style={{ textAlign: "center" }}>D</span>
+          <span style={{ textAlign: "center" }}>L</span>
+          <span style={{ textAlign: "center" }}>GD</span>
+          <span style={{ textAlign: "center", color: "var(--text-secondary)" }}>Pts</span>
         </div>
-        <div className="divide-y divide-white/[0.04]">
-          {rows.map((team, i) => {
-            const rank = startRank + i;
-            const isTop3 = rank <= 3;
-            const rankColor = rank === 1 ? "text-amber-400" : rank === 2 ? "text-zinc-300" : rank === 3 ? "text-amber-700" : "text-zinc-600";
-            return (
-              <Link key={team.id} href={`/dashboard/teams/${team.id}`}
-                className={`grid grid-cols-[2rem_1fr_repeat(6,4rem)] px-6 py-4 items-center hover:bg-white/[0.03] transition ${isTop3 ? "bg-white/[0.015]" : ""}`}>
-                <span className={`text-sm font-black ${rankColor}`}>{rank}</span>
-                <div className="min-w-0">
-                  <p className={`font-bold text-sm truncate ${isTop3 ? "text-white" : "text-zinc-200"}`}>{team.name}</p>
-                  <p className="text-zinc-600 text-xs">{team.sport.name} · {team.memberCount} members</p>
+        {rows.map((team, i) => {
+          const rank = startRank + i;
+          const isTop3 = rank <= 3;
+          return (
+            <Link key={team.id} href={`/dashboard/teams/${team.id}`} style={{ textDecoration: "none" }}>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "2rem 1fr repeat(6, 3.5rem)", padding: "14px 20px", alignItems: "center", borderTop: "1px solid var(--border)", background: isTop3 ? "rgba(255,255,255,0.015)" : undefined, transition: "background 0.12s" }}
+                onMouseEnter={(el) => { (el.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                onMouseLeave={(el) => { (el.currentTarget as HTMLElement).style.background = isTop3 ? "rgba(255,255,255,0.015)" : ""; }}
+              >
+                <span style={{ fontSize: "0.875rem", fontWeight: 900, color: rankColor(rank) }}>{rank}</span>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: isTop3 ? "var(--text-primary)" : "var(--text-secondary)" }}>{team.name}</p>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{team.sport.name} · {team.memberCount}m</p>
                 </div>
-                <span className="text-center text-sm tabular-nums text-zinc-400">{team.played}</span>
-                <span className="text-center text-sm tabular-nums text-[#00ff87]">{team.wins}</span>
-                <span className="text-center text-sm tabular-nums text-zinc-500">{team.draws}</span>
-                <span className="text-center text-sm tabular-nums text-red-400">{team.losses}</span>
-                <span className={`text-center text-sm tabular-nums font-semibold ${team.goalDiff > 0 ? "text-[#00ff87]" : team.goalDiff < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-secondary)", tabularNums: true } as any}>{team.played}</span>
+                <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--accent)", fontWeight: 700 }}>{team.wins}</span>
+                <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-muted)" }}>{team.draws}</span>
+                <span style={{ textAlign: "center", fontSize: "0.875rem", color: "#f87171" }}>{team.losses}</span>
+                <span style={{ textAlign: "center", fontSize: "0.875rem", fontWeight: 600, color: team.goalDiff > 0 ? "var(--accent)" : team.goalDiff < 0 ? "#f87171" : "var(--text-muted)" }}>
                   {team.goalDiff > 0 ? "+" : ""}{team.goalDiff}
                 </span>
-                <span className={`text-center text-base font-black tabular-nums ${isTop3 ? "text-white" : "text-zinc-300"}`}>{team.points}</span>
-              </Link>
-            );
-          })}
-        </div>
+                <span style={{ textAlign: "center", fontSize: "1rem", fontWeight: 900, color: isTop3 ? "var(--text-primary)" : "var(--text-secondary)" }}>{team.points}</span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     );
   }
 
   function PlayerTable({ rows, startRank = 1 }: { rows: PlayerStat[]; startRank?: number }) {
     return (
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[2rem_1fr_repeat(6,4rem)] px-6 py-3 border-b border-white/[0.06] text-xs font-bold text-zinc-600 uppercase tracking-wider">
+      <div className="sp-card" style={{ overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2rem 1fr repeat(6, 3.5rem)", padding: "10px 20px", borderBottom: "1px solid var(--border)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>
           <span>#</span><span>Player</span>
-          <span className="text-center">P</span><span className="text-center">W</span>
-          <span className="text-center">D</span><span className="text-center">L</span>
-          <span className="text-center">SD</span><span className="text-center text-zinc-400">Pts</span>
+          <span style={{ textAlign: "center" }}>P</span><span style={{ textAlign: "center" }}>W</span>
+          <span style={{ textAlign: "center" }}>D</span><span style={{ textAlign: "center" }}>L</span>
+          <span style={{ textAlign: "center" }}>SD</span><span style={{ textAlign: "center", color: "var(--text-secondary)" }}>Pts</span>
         </div>
-        <div className="divide-y divide-white/[0.04]">
-          {rows.map((player, i) => {
-            const rank = startRank + i;
-            const isTop3 = rank <= 3;
-            const rankColor = rank === 1 ? "text-amber-400" : rank === 2 ? "text-zinc-300" : rank === 3 ? "text-amber-700" : "text-zinc-600";
-            return (
-              <div key={player.id}
-                className={`grid grid-cols-[2rem_1fr_repeat(6,4rem)] px-6 py-4 items-center ${isTop3 ? "bg-white/[0.015]" : ""}`}>
-                <span className={`text-sm font-black ${rankColor}`}>{rank}</span>
-                <div className="min-w-0">
-                  <p className={`font-bold text-sm truncate ${isTop3 ? "text-white" : "text-zinc-200"}`}>{player.name}</p>
-                  <p className="text-zinc-600 text-xs">{player.sport.name}</p>
-                </div>
-                <span className="text-center text-sm tabular-nums text-zinc-400">{player.played}</span>
-                <span className="text-center text-sm tabular-nums text-[#00ff87]">{player.wins}</span>
-                <span className="text-center text-sm tabular-nums text-zinc-500">{player.draws}</span>
-                <span className="text-center text-sm tabular-nums text-red-400">{player.losses}</span>
-                <span className={`text-center text-sm tabular-nums font-semibold ${player.scoreDiff > 0 ? "text-[#00ff87]" : player.scoreDiff < 0 ? "text-red-400" : "text-zinc-500"}`}>
-                  {player.scoreDiff > 0 ? "+" : ""}{player.scoreDiff}
-                </span>
-                <span className={`text-center text-base font-black tabular-nums ${isTop3 ? "text-white" : "text-zinc-300"}`}>{player.points}</span>
+        {rows.map((p, i) => {
+          const rank = startRank + i; const isTop3 = rank <= 3;
+          return (
+            <div key={p.id}
+              style={{ display: "grid", gridTemplateColumns: "2rem 1fr repeat(6, 3.5rem)", padding: "14px 20px", alignItems: "center", borderTop: "1px solid var(--border)", background: isTop3 ? "rgba(255,255,255,0.015)" : undefined }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 900, color: rankColor(rank) }}>{rank}</span>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontWeight: 700, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: isTop3 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p.name}</p>
+                <p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{p.sport.name}</p>
               </div>
-            );
-          })}
-        </div>
+              <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-secondary)" }}>{p.played}</span>
+              <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--accent)", fontWeight: 700 }}>{p.wins}</span>
+              <span style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-muted)" }}>{p.draws}</span>
+              <span style={{ textAlign: "center", fontSize: "0.875rem", color: "#f87171" }}>{p.losses}</span>
+              <span style={{ textAlign: "center", fontSize: "0.875rem", fontWeight: 600, color: p.scoreDiff > 0 ? "var(--accent)" : p.scoreDiff < 0 ? "#f87171" : "var(--text-muted)" }}>
+                {p.scoreDiff > 0 ? "+" : ""}{p.scoreDiff}
+              </span>
+              <span style={{ textAlign: "center", fontSize: "1rem", fontWeight: 900, color: isTop3 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p.points}</span>
+            </div>
+          );
+        })}
       </div>
     );
   }
 
+  const isEmpty = mode === "teams" ? filteredTeams.length === 0 : filteredPlayers.length === 0;
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         {/* Mode toggle */}
-        <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-xl p-1">
+        <div style={{ display: "flex", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)", borderRadius: 12, padding: 4, gap: 2 }}>
           {(["teams", "players"] as const).map((m) => (
-            <button key={m} onClick={() => switchMode(m)}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${mode === m ? "bg-[#00ff87] text-zinc-900" : "text-zinc-500 hover:text-white"}`}>
-              {m === "teams" ? "🏆 Teams" : "👤 Players"}
-            </button>
+            <button key={m} onClick={() => switchMode(m)} style={{
+              padding: "7px 18px", borderRadius: 10, fontSize: "0.8125rem", fontWeight: 700, border: "none", cursor: "pointer",
+              background: mode === m ? "rgba(255,255,255,0.08)" : "transparent",
+              color: mode === m ? "var(--text-primary)" : "var(--text-secondary)",
+              transition: "all 0.15s",
+              textTransform: "capitalize",
+            }}>{m}</button>
           ))}
         </div>
 
-        {/* Sport filter — only shows sports relevant to current mode */}
-        {filteredSports.length > 0 && (
-          <select value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className={selectClass}>
-            <option value="all">All {mode === "teams" ? "Team" : "Individual"} Sports</option>
-            {filteredSports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        )}
+        <select value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className="sp-select">
+          <option value="all">All sports</option>
+          {filteredSports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
 
-        {/* Sort */}
-        <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-xl p-1">
-          {sortOptions.map((opt) => (
-            <button key={opt.value} onClick={() => setSortBy(opt.value)}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${sortBy === opt.value ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white"}`}>
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="sp-select">
+          <option value="points">Sort: Points</option>
+          <option value="winRate">Sort: Win Rate</option>
+          <option value="goalsFor">{mode === "teams" ? "Sort: Goals Scored" : "Sort: Points Scored"}</option>
+          <option value="played">Sort: Most Active</option>
+        </select>
       </div>
 
+      {/* Table */}
       {isEmpty ? (
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl px-6 py-16 text-center">
-          <p className="text-4xl mb-3">🏆</p>
-          <p className="text-zinc-400 font-medium">No completed matches yet</p>
-          <p className="text-zinc-600 text-sm mt-1">
-            Play some matches to see standings here.
-          </p>
+        <div className="sp-card" style={{ padding: "64px 24px", textAlign: "center" }}>
+          <p style={{ fontSize: "2.5rem", marginBottom: 12 }}>🏆</p>
+          <p style={{ color: "var(--text-secondary)", fontWeight: 600 }}>No completed matches yet</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: 6 }}>Play some matches to see standings here.</p>
         </div>
       ) : mode === "teams" ? (
         sportFilter !== "all" ? <TeamTable rows={filteredTeams} /> :
         teamGroups ? (
-          <div className="space-y-8">
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
             {Object.entries(teamGroups).map(([sport, rows]) => (
               <div key={sport}>
-                <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />{sport}
+                <h2 style={{ fontWeight: 700, fontSize: "1.05rem", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 6, height: 18, background: "var(--accent)", borderRadius: 3, display: "inline-block" }} />{sport}
                 </h2>
                 <TeamTable rows={rows} />
               </div>
@@ -225,11 +185,11 @@ export default function LeaderboardsClient({ teams, players = [], sports }: Prop
       ) : (
         sportFilter !== "all" ? <PlayerTable rows={filteredPlayers} /> :
         playerGroups ? (
-          <div className="space-y-8">
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
             {Object.entries(playerGroups).map(([sport, rows]) => (
               <div key={sport}>
-                <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <span className="w-1.5 h-4 bg-purple-500 rounded-full inline-block" />{sport}
+                <h2 style={{ fontWeight: 700, fontSize: "1.05rem", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 6, height: 18, background: "#c084fc", borderRadius: 3, display: "inline-block" }} />{sport}
                 </h2>
                 <PlayerTable rows={rows} />
               </div>
