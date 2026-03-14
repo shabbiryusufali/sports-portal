@@ -46,7 +46,7 @@ export async function createEvent(
   const start       = new Date(String(form.get("start")));
   const end         = new Date(String(form.get("end")));
   const notes       = (form.get("notes")       as string) || null;
-  const name        = (form.get("name")        as string)?.trim() || `${rawType} session`;
+  const baseName    = (form.get("name")        as string)?.trim() || `${rawType} session`;
   const location    = (form.get("location")    as string) || null;
   const description = (form.get("description") as string) || null;
   const teamId      = (form.get("team_id")     as string) || null;
@@ -71,7 +71,19 @@ export async function createEvent(
       return { success: false, message: "You must be team captain to add that team." };
   }
 
-  // Create the event
+  // FIX: auto-increment event name on collision so "ASDF" → "ASDF 1" → "ASDF 2" etc.
+  // Check against this organizer's events only — different organizers may share names.
+  let name = baseName;
+  let counter = 1;
+  while (
+    await prisma.event.findFirst({
+      where: { name, organizer_id: session.user.id },
+    })
+  ) {
+    name = `${baseName} ${counter}`;
+    counter++;
+  }
+
   const event = await prisma.event.create({
     data: {
       name,
@@ -87,8 +99,7 @@ export async function createEvent(
     },
   });
 
-  // Auto-join the organizer as an individual player if they have a player profile.
-  // This way the creator always appears in the Participants list.
+  // Auto-join the organizer as a player if they have a player profile
   const playerProfile = await prisma.player.findUnique({
     where: { id: session.user.id },
     select: { id: true },

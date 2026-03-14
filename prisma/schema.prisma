@@ -7,90 +7,93 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Team {
-  id String  @id @default(cuid())
-  name String
-  sport_id String
-  sport Sport @relation(fields: [sport_id], references: [id])
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  is_active Boolean @default(true)
-  captain_id String
-  captain Player @relation("Team_captain", fields: [captain_id], references: [id])
-  members Player[] @relation("Players")
-  events Event[] @relation("Events")
-  matchesAsTeamA Match[] @relation("TeamA")
-  matchesAsTeamB Match[] @relation("TeamB")
-  statistics Statistics[] @relation("TeamToStatistics")
+  id             String       @id @default(cuid())
+  name           String
+  sport_id       String
+  sport          Sport        @relation(fields: [sport_id], references: [id])
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+  is_active      Boolean      @default(true)
+  captain_id     String
+  captain        Player       @relation("Team_captain", fields: [captain_id], references: [id])
+  members        Player[]     @relation("Players")
+  // FIX: renamed from "Events" to "TeamEvents" to avoid join-table name collision with Player <-> Event
+  events         Event[]      @relation("TeamEvents")
+  matchesAsTeamA Match[]      @relation("TeamA")
+  matchesAsTeamB Match[]      @relation("TeamB")
+  statistics     Statistics[] @relation("TeamToStatistics")
   userStatistics UserStatistics[]
 }
 
 model Event {
-  id String @id @default(cuid())
-  name String
-  description String?
-  start_time DateTime
-  end_time DateTime
-  location String?
-  sport_id String
-  sport Sport @relation(fields: [sport_id], references: [id])
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  organizer_id String
-  organizer User @relation("UserOrganizedEvents", fields: [organizer_id], references: [id])
-  participants Team[] @relation("Events")
-  players Player[] @relation("Events")
-  status Status @default(SCHEDULED)
-  notes String?
-  event_type EventType @default(PRACTICE)
-  is_public Boolean @default(false)
+  id                    String    @id @default(cuid())
+  name                  String
+  description           String?
+  start_time            DateTime
+  end_time              DateTime
+  location              String?
+  sport_id              String
+  sport                 Sport     @relation(fields: [sport_id], references: [id])
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  organizer_id          String
+  organizer             User      @relation("UserOrganizedEvents", fields: [organizer_id], references: [id])
+  // FIX: both sides renamed — "Events" was shared between Team and Player causing _Events FK collision
+  participants          Team[]    @relation("TeamEvents")
+  players               Player[]  @relation("PlayerEvents")
+  status                Status    @default(SCHEDULED)
+  notes                 String?
+  event_type            EventType @default(PRACTICE)
+  is_public             Boolean   @default(false)
   registration_deadline DateTime?
-  matches Match[]
+  matches               Match[]
 }
 
 model Sport {
-  id String @id @default(cuid())
-  name String
-  description String?
-  is_team_sport Boolean @default(false)
-  events Event[]
-  teams Team[]
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  is_team_sport  Boolean          @default(false)
+  events         Event[]
+  teams          Team[]
   userStatistics UserStatistics[]
-  matches Match[]
+  matches        Match[]
 }
 
 model Player {
-  id            String   @id
-  user          User     @relation(fields: [id], references: [id])
-  first_name    String
-  last_name     String
-  date_of_birth DateTime
-  gender        String
-  events        Event[]  @relation("Events")
-  teams         Team[]   @relation("Players")
-  captainOf     Team[]   @relation("Team_captain")
+  id               String   @id
+  user             User     @relation(fields: [id], references: [id])
+  first_name       String
+  last_name        String
+  date_of_birth    DateTime
+  gender           String
+  // FIX: renamed from "Events" to "PlayerEvents"
+  events           Event[]  @relation("PlayerEvents")
+  teams            Team[]   @relation("Players")
+  captainOf        Team[]   @relation("Team_captain")
+  matchesAsPlayerA Match[]  @relation("PlayerA")
+  matchesAsPlayerB Match[]  @relation("PlayerB")
 }
 
 model User {
-  id String @id @default(cuid())
-  name String?
-  email String @unique
-  emailVerified DateTime?
-  image String?
-  accounts Account[]
-  sessions Session[]
-
-  bio String?
-  username String @unique
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  bio             String?
+  username        String    @unique
   profile_picture String?
-  password_hash String
-  is_admin Boolean @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  is_active Boolean @default(true)
-  player Player?
-  organizedEvents Event[] @relation("UserOrganizedEvents")
+  password_hash   String
+  is_admin        Boolean   @default(false)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  is_active       Boolean   @default(true)
+  player          Player?
+  organizedEvents Event[]   @relation("UserOrganizedEvents")
 }
 
 model Account {
@@ -106,8 +109,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -117,8 +119,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -130,54 +131,58 @@ model VerificationToken {
 }
 
 model UserStatistics {
-  id String @id @default(cuid())
-  team_id String
-  team Team @relation(fields: [team_id], references: [id])
-  sport_id String
-  sport Sport @relation(fields: [sport_id], references: [id])
-  games_played Int @default(0)
-  wins Int @default(0)
-  losses Int @default(0)
-  draws Int @default(0)
+  id             String       @id @default(cuid())
+  team_id        String
+  team           Team         @relation(fields: [team_id], references: [id])
+  sport_id       String
+  sport          Sport        @relation(fields: [sport_id], references: [id])
+  games_played   Int          @default(0)
+  wins           Int          @default(0)
+  losses         Int          @default(0)
+  draws          Int          @default(0)
   flexible_stats Statistics[] @relation("UserFlexibleStats")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
 }
 
 model Statistics {
-  id String @id @default(cuid())
-  match_id String
-  match Match @relation(fields: [match_id], references: [id])
-  team_id String
-  team Team @relation("TeamToStatistics", fields: [team_id], references: [id])
-  key String
-  value Int
-  minutes_played Int @default(0)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  userStatistics UserStatistics? @relation("UserFlexibleStats", fields: [user_statistics_id], references: [id])
+  id                 String          @id @default(cuid())
+  match_id           String
+  match              Match           @relation(fields: [match_id], references: [id])
+  team_id            String
+  team               Team            @relation("TeamToStatistics", fields: [team_id], references: [id])
+  key                String
+  value              Int
+  minutes_played     Int             @default(0)
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+  userStatistics     UserStatistics? @relation("UserFlexibleStats", fields: [user_statistics_id], references: [id])
   user_statistics_id String?
 }
 
 model Match {
-  id String @id @default(cuid())
-  sport_id String
-  sport Sport @relation(fields: [sport_id], references: [id])
-  team_a_id String
-  team_a Team @relation("TeamA", fields: [team_a_id], references: [id])
-  team_b_id String
-  team_b Team @relation("TeamB", fields: [team_b_id], references: [id])
-  match_date DateTime
-  event_id String?
-  event Event? @relation(fields: [event_id], references: [id])
-  score_team_a Int @default(0)
-  score_team_b Int @default(0)
-  status Status @default(SCHEDULED)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  statistics Statistics[]
-  notes String?
-  match_type MatchType @default(FRIENDLY)
+  id           String       @id @default(cuid())
+  sport_id     String
+  sport        Sport        @relation(fields: [sport_id], references: [id])
+  team_a_id    String?
+  team_a       Team?        @relation("TeamA", fields: [team_a_id], references: [id])
+  team_b_id    String?
+  team_b       Team?        @relation("TeamB", fields: [team_b_id], references: [id])
+  player_a_id  String?
+  player_a     Player?      @relation("PlayerA", fields: [player_a_id], references: [id])
+  player_b_id  String?
+  player_b     Player?      @relation("PlayerB", fields: [player_b_id], references: [id])
+  match_date   DateTime
+  event_id     String?
+  event        Event?       @relation(fields: [event_id], references: [id])
+  score_team_a Int          @default(0)
+  score_team_b Int          @default(0)
+  status       Status       @default(SCHEDULED)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+  statistics   Statistics[]
+  notes        String?
+  match_type   MatchType    @default(FRIENDLY)
 }
 
 enum Status {

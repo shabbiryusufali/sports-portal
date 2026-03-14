@@ -1,15 +1,15 @@
 "use client";
+
 import { useState } from "react";
-// Update the path below to the correct relative location of your actions file
 import { registerWithCredentials } from "./actions";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function RegisterForm() {
-  const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -20,31 +20,41 @@ export default function RegisterForm() {
     setLoading(true);
     setError(null);
 
-    try {
-      const result = await registerWithCredentials(form);
-      if (!result.success)
-        throw new Error(result.message || "Registration failed");
+    const result = await registerWithCredentials(form);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.message ?? "Registration failed.");
+    } else {
+      setSubmittedEmail(form.email);
       setSuccess(true);
-      setTimeout(() => router.push("/auth/login"), 1500);
-    } catch (err: any) {
-      setError(err.message || "Registration failed.");
-    } finally {
-      setLoading(false);
     }
   };
 
+  // ── Success state: prompt user to check email ─────────────────────────────
   if (success) {
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl text-center">
-        <div className="text-4xl mb-3">🎉</div>
-        <p className="text-white font-semibold">Account created!</p>
-        <p className="text-zinc-400 text-sm mt-1">
-          Redirecting you to sign in…
+        <div className="text-5xl mb-4">📬</div>
+        <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
+        <p className="text-zinc-400 text-sm leading-relaxed mb-1">
+          We sent a verification link to
         </p>
+        <p className="text-white font-semibold text-sm mb-4">{submittedEmail}</p>
+        <p className="text-zinc-500 text-xs mb-6">
+          Click the link in the email to activate your account. It expires in 24 hours.
+        </p>
+        <Link
+          href="/auth/login"
+          className="inline-block w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition text-sm"
+        >
+          Go to sign in
+        </Link>
       </div>
     );
   }
 
+  // ── Registration form ─────────────────────────────────────────────────────
   return (
     <form
       onSubmit={handleSubmit}
@@ -60,10 +70,7 @@ export default function RegisterForm() {
 
       <div className="space-y-4">
         <div>
-          <label
-            className="block text-xs font-medium text-zinc-400 mb-1.5"
-            htmlFor="name"
-          >
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="name">
             Full Name
           </label>
           <input
@@ -79,10 +86,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label
-            className="block text-xs font-medium text-zinc-400 mb-1.5"
-            htmlFor="email"
-          >
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="email">
             Email
           </label>
           <input
@@ -98,10 +102,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label
-            className="block text-xs font-medium text-zinc-400 mb-1.5"
-            htmlFor="password"
-          >
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5" htmlFor="password">
             Password
           </label>
           <input
@@ -120,11 +121,18 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+          className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-sm"
         >
-          {loading ? "Creating account…" : "Sign Up"}
+          {loading ? "Creating account…" : "Create Account"}
         </button>
       </div>
+
+      <p className="text-center text-zinc-500 text-sm mt-6">
+        Already have an account?{" "}
+        <Link href="/auth/login" className="text-[#00ff87] hover:underline font-medium">
+          Sign in
+        </Link>
+      </p>
     </form>
   );
 }

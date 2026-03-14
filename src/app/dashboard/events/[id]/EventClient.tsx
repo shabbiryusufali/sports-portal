@@ -29,11 +29,16 @@ type Match = {
   match_date: string;
   score_team_a: number;
   score_team_b: number;
-  team_a: Team;
-  team_b: Team;
+  team_a: { name: string } | null;
+  team_b: { name: string } | null;
+  player_a: { first_name: string; last_name: string } | null;
+  player_b: { first_name: string; last_name: string } | null;
 };
 
 type Participant = Team & { _count: { members: number } };
+
+// Simple participant used in AddMatchForm (works for both teams and players)
+type SimpleParticipant = { id: string; name: string };
 
 interface Props {
   event: {
@@ -57,6 +62,26 @@ interface Props {
 
 const input =
   "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-[#00ff87]/50 transition";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function matchSideName(
+  team: { name: string } | null,
+  player: { first_name: string; last_name: string } | null
+): string {
+  if (team) return team.name;
+  if (player) return `${player.first_name} ${player.last_name}`;
+  return "Unknown";
+}
+
+function matchSideInitials(
+  team: { name: string } | null,
+  player: { first_name: string; last_name: string } | null
+): string {
+  if (team) return team.name.slice(0, 2).toUpperCase();
+  if (player) return `${player.first_name[0]}${player.last_name[0]}`.toUpperCase();
+  return "??";
+}
 
 // ── Edit Score Modal ──────────────────────────────────────────────────────────
 
@@ -83,6 +108,9 @@ function EditScoreModal({
   const numA = parseInt(a, 10);
   const numB = parseInt(b, 10);
   const valid = !isNaN(numA) && !isNaN(numB) && numA >= 0 && numB >= 0;
+
+  const nameA = matchSideName(match.team_a, match.player_a);
+  const nameB = matchSideName(match.team_b, match.player_b);
 
   async function handleSave() {
     if (!valid) return;
@@ -111,7 +139,7 @@ function EditScoreModal({
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 mb-5">
           <div className="text-center">
-            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{match.team_a.name}</p>
+            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{nameA}</p>
             <input
               type="number" min={0} value={a}
               onChange={(e) => setA(e.target.value)}
@@ -120,7 +148,7 @@ function EditScoreModal({
           </div>
           <span className="text-zinc-600 font-bold text-xl pt-5">:</span>
           <div className="text-center">
-            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{match.team_b.name}</p>
+            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{nameB}</p>
             <input
               type="number" min={0} value={b}
               onChange={(e) => setB(e.target.value)}
@@ -155,32 +183,36 @@ function EditScoreModal({
 function AddMatchForm({
   eventId,
   participants,
-  participantLabel = "teams",
+  isTeamSport,
   onAdded,
 }: {
   eventId: string;
-  participants: Team[];
-  participantLabel?: string;
+  participants: SimpleParticipant[];
+  isTeamSport: boolean;
   onAdded: () => void;
 }) {
-  const [, start] = useTransition();
-  const [teamA, setTeamA] = useState(participants[0]?.id ?? "");
-  const [teamB, setTeamB] = useState(participants[1]?.id ?? "");
+  // FIX: single set of state vars (was duplicated as sideA/teamA, sideB/teamB)
+  const [sideA, setSideA] = useState(participants[0]?.id ?? "");
+  const [sideB, setSideB] = useState(participants[1]?.id ?? "");
   const [matchDate, setMatchDate] = useState("");
   const [matchType, setMatchType] = useState<"FRIENDLY" | "TOURNAMENT">("FRIENDLY");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const label = isTeamSport ? "Team" : "Player";
+
   async function handleAdd() {
-    if (!teamA || !teamB || teamA === teamB) {
-      setErr("Please select two different teams.");
+    if (!sideA || !sideB || sideA === sideB) {
+      setErr(`Please select two different ${isTeamSport ? "teams" : "players"}.`);
       return;
     }
     setErr(null);
-    setLoading(true);
+    setLoading(true); // FIX: was never set to true
     const res = await addMatch(eventId, {
-      teamAId: teamA,
-      teamBId: teamB,
+      teamAId:   isTeamSport ? sideA : undefined,
+      teamBId:   isTeamSport ? sideB : undefined,
+      playerAId: isTeamSport ? undefined : sideA,
+      playerBId: isTeamSport ? undefined : sideB,
       matchDate,
       matchType,
     });
@@ -195,7 +227,7 @@ function AddMatchForm({
   if (participants.length < 2) {
     return (
       <p className="text-zinc-500 text-sm">
-        At least 2 {participantLabel} are needed to create a match.
+        At least 2 {isTeamSport ? "teams" : "players"} are needed to create a match.
       </p>
     );
   }
@@ -206,15 +238,18 @@ function AddMatchForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5">Team A</label>
-          <select value={teamA} onChange={(e) => setTeamA(e.target.value)} className={input}>
-            {participants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          {/* FIX: label reflects sport type */}
+          <label className="block text-xs text-zinc-500 mb-1.5">{label} A</label>
+          {/* FIX: value/onChange now use sideA/setSideA (was teamA/setTeamA which was separate state) */}
+          <select value={sideA} onChange={(e) => setSideA(e.target.value)} className={input}>
+            {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5">Team B</label>
-          <select value={teamB} onChange={(e) => setTeamB(e.target.value)} className={input}>
-            {participants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          <label className="block text-xs text-zinc-500 mb-1.5">{label} B</label>
+          {/* FIX: value/onChange now use sideB/setSideB */}
+          <select value={sideB} onChange={(e) => setSideB(e.target.value)} className={input}>
+            {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
       </div>
@@ -233,13 +268,15 @@ function AddMatchForm({
         </div>
       </div>
 
-      {teamA === teamB && teamA && (
-        <p className="text-amber-400 text-xs">Teams must be different.</p>
+      {/* FIX: check sideA === sideB (was teamA === teamB which was always empty) */}
+      {sideA === sideB && sideA && (
+        <p className="text-amber-400 text-xs">{label}s must be different.</p>
       )}
       {err && <p className="text-red-400 text-xs">{err}</p>}
 
       <button
-        disabled={loading || !teamA || !teamB || teamA === teamB}
+        // FIX: disabled checks sideA/sideB (was teamA/teamB — always disabled)
+        disabled={loading || !sideA || !sideB || sideA === sideB}
         onClick={handleAdd}
         className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl text-sm hover:bg-[#00e87a] transition disabled:opacity-40 disabled:cursor-not-allowed"
       >
@@ -419,84 +456,80 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
       )}
 
       {/* ── Participants (team-sport: teams; individual: players) ── */}
-      {isTeamSport ? 
-              /* ── Participating Teams ───────────────────────────────────── */
-      
-      (
-              <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-                  <h2 className="font-bold flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
-                    Participating Teams
-                    <span className="text-zinc-600 font-normal text-sm">({event.participants.length})</span>
-                  </h2>
-                  {canManage && !isEventDone && addableTeams.length > 0 && (
+      {isTeamSport ? (
+        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <h2 className="font-bold flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
+              Participating Teams
+              <span className="text-zinc-600 font-normal text-sm">({event.participants.length})</span>
+            </h2>
+            {canManage && !isEventDone && addableTeams.length > 0 && (
+              <button
+                onClick={() => setShowAddTeam((v) => !v)}
+                className="text-xs font-semibold text-[#00ff87] bg-[#00ff87]/10 hover:bg-[#00ff87]/20 px-3 py-1.5 rounded-lg transition"
+              >
+                {showAddTeam ? "Cancel" : "+ Add Team"}
+              </button>
+            )}
+          </div>
+
+          {showAddTeam && (
+            <div className="px-6 py-4 border-b border-white/[0.06] flex gap-3">
+              <select ref={addTeamRef} className={`${input} flex-1`} defaultValue={addableTeams[0]?.id ?? ""}>
+                {addableTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <button
+                disabled={pending}
+                onClick={() => {
+                  const id = addTeamRef.current?.value;
+                  if (!id) return;
+                  act(() => addTeamToEvent(event.id, id), () => {
+                    flash("ok", "Team added!");
+                    setShowAddTeam(false);
+                  });
+                }}
+                className="bg-[#00ff87] text-zinc-900 font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+          )}
+
+          {event.participants.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <p className="text-4xl mb-3">👥</p>
+              <p className="text-zinc-500 text-sm">
+                {canManage ? "No teams yet — add some above." : "No teams participating."}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {event.participants.map((team) => (
+                <div key={team.id} className="flex items-center gap-4 px-6 py-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xs text-[#00ff87] shrink-0">
+                    {team.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{team.name}</p>
+                    <p className="text-zinc-600 text-xs">{team._count.members} member{team._count.members !== 1 ? "s" : ""}</p>
+                  </div>
+                  {canManage && !isEventDone && (
                     <button
-                      onClick={() => setShowAddTeam((v) => !v)}
-                      className="text-xs font-semibold text-[#00ff87] bg-[#00ff87]/10 hover:bg-[#00ff87]/20 px-3 py-1.5 rounded-lg transition"
+                      disabled={pending}
+                      onClick={() => act(() => removeTeamFromEvent(event.id, team.id), () => flash("ok", "Team removed."))}
+                      className="text-zinc-600 hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
                     >
-                      {showAddTeam ? "Cancel" : "+ Add Team"}
+                      Remove
                     </button>
                   )}
                 </div>
-        
-                {showAddTeam && (
-                  <div className="px-6 py-4 border-b border-white/[0.06] flex gap-3">
-                    <select ref={addTeamRef} className={`${input} flex-1`} defaultValue={addableTeams[0]?.id ?? ""}>
-                      {addableTeams.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
-                    <button
-                      disabled={pending}
-                      onClick={() => {
-                        const id = addTeamRef.current?.value;
-                        if (!id) return;
-                        act(() => addTeamToEvent(event.id, id), () => {
-                          flash("ok", "Team added!");
-                          setShowAddTeam(false);
-                        });
-                      }}
-                      className="bg-[#00ff87] text-zinc-900 font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-40"
-                    >
-                      Add
-                    </button>
-                  </div>
-                )}
-        
-                {event.participants.length === 0 ? (
-                  <div className="px-6 py-10 text-center">
-                    <p className="text-4xl mb-3">👥</p>
-                    <p className="text-zinc-500 text-sm">
-                      {canManage ? "No teams yet — add some above." : "No teams participating."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-white/[0.04]">
-                    {event.participants.map((team) => (
-                      <div key={team.id} className="flex items-center gap-4 px-6 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xs text-[#00ff87] shrink-0">
-                          {team.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm">{team.name}</p>
-                          <p className="text-zinc-600 text-xs">{team._count.members} member{team._count.members !== 1 ? "s" : ""}</p>
-                        </div>
-                        {canManage && !isEventDone && (
-                          <button
-                            disabled={pending}
-                            onClick={() => act(() => removeTeamFromEvent(event.id, team.id), () => flash("ok", "Team removed."))}
-                            className="text-zinc-600 hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-        
+              ))}
+            </div>
+          )}
+        </section>
       ) : (
         <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
@@ -532,6 +565,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
           )}
         </section>
       )}
+
       {/* ── Matches ───────────────────────────────────────────────── */}
       <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
@@ -555,12 +589,13 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
           <div className="px-6 py-5 border-b border-white/[0.06]">
             <AddMatchForm
               eventId={event.id}
-              participants={isTeamSport ? event.participants : teamsInSport}
-              participantLabel={isTeamSport ? "teams" : "players"}
-              onAdded={() => {
-                flash("ok", "Match added! Refresh to see it.");
-                setShowAddMatch(false);
-              }}
+              isTeamSport={isTeamSport}
+              participants={
+                isTeamSport
+                  ? event.participants.map((t) => ({ id: t.id, name: t.name }))
+                  : event.players.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }))
+              }
+              onAdded={() => { flash("ok", "Match added! Refresh to see it."); setShowAddMatch(false); }}
             />
           </div>
         )}
@@ -585,9 +620,16 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
               const isDone = isCompleted || isCancelled;
               const canEditScore = canManage && !isCancelled;
 
+              // FIX: use helper so these work for both team and individual matches
+              const nameA = matchSideName(match.team_a, match.player_a);
+              const nameB = matchSideName(match.team_b, match.player_b);
+              const initialsA = matchSideInitials(match.team_a, match.player_a);
+              const initialsB = matchSideInitials(match.team_b, match.player_b);
+
+              // FIX: null-safe winner calculation
               const winner = isCompleted
-                ? score.a > score.b ? match.team_a.name
-                : score.b > score.a ? match.team_b.name
+                ? score.a > score.b ? nameA
+                : score.b > score.a ? nameB
                 : "Draw"
                 : null;
 
@@ -618,7 +660,6 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                       )}
                     </div>
 
-                    {/* Edit score button — always visible on non-cancelled matches for managers */}
                     {canEditScore && (
                       <button
                         onClick={() => setEditingMatch(match)}
@@ -631,12 +672,12 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
 
                   {/* Scoreboard */}
                   <div className="grid grid-cols-3 gap-4 items-center mb-5">
-                    {/* Team A */}
+                    {/* Side A */}
                     <div className="text-center">
                       <div className="w-12 h-12 rounded-2xl bg-[#00ff87]/10 flex items-center justify-center font-black text-sm text-[#00ff87] mx-auto mb-2">
-                        {match.team_a.name.slice(0, 2).toUpperCase()}
+                        {initialsA}
                       </div>
-                      <p className="font-bold text-sm truncate mb-3">{match.team_a.name}</p>
+                      <p className="font-bold text-sm truncate mb-3">{nameA}</p>
 
                       {isOngoing && canManage ? (
                         <div className="flex items-center justify-center gap-2">
@@ -644,7 +685,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                             disabled={pending || score.a <= 0}
                             onClick={() => act(
                               () => undoScore(match.id, event.id, "a"),
-                              () => setScores((p) => ({ ...p, [match.id]: { ...p[match.id], a: p[match.id].a - 1 } }))
+                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, a: cur.a - 1 } }; })
                             )}
                             className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
                           >−</button>
@@ -653,7 +694,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                             disabled={pending}
                             onClick={() => act(
                               () => scoreGoal(match.id, event.id, "a"),
-                              () => setScores((p) => ({ ...p, [match.id]: { ...p[match.id], a: p[match.id].a + 1 } }))
+                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, a: cur.a + 1 } }; })
                             )}
                             className="w-9 h-9 rounded-xl bg-[#00ff87]/20 hover:bg-[#00ff87]/40 text-[#00ff87] font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
                           >+</button>
@@ -678,12 +719,12 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                       )}
                     </div>
 
-                    {/* Team B */}
+                    {/* Side B */}
                     <div className="text-center">
                       <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-sm text-blue-400 mx-auto mb-2">
-                        {match.team_b.name.slice(0, 2).toUpperCase()}
+                        {initialsB}
                       </div>
-                      <p className="font-bold text-sm truncate mb-3">{match.team_b.name}</p>
+                      <p className="font-bold text-sm truncate mb-3">{nameB}</p>
 
                       {isOngoing && canManage ? (
                         <div className="flex items-center justify-center gap-2">
@@ -691,7 +732,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                             disabled={pending || score.b <= 0}
                             onClick={() => act(
                               () => undoScore(match.id, event.id, "b"),
-                              () => setScores((p) => ({ ...p, [match.id]: { ...p[match.id], b: p[match.id].b - 1 } }))
+                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, b: cur.b - 1 } }; })
                             )}
                             className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
                           >−</button>
@@ -700,7 +741,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                             disabled={pending}
                             onClick={() => act(
                               () => scoreGoal(match.id, event.id, "b"),
-                              () => setScores((p) => ({ ...p, [match.id]: { ...p[match.id], b: p[match.id].b + 1 } }))
+                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, b: cur.b + 1 } }; })
                             )}
                             className="w-9 h-9 rounded-xl bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
                           >+</button>
@@ -763,39 +804,37 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
         )}
       </section>
 
-      {isTeamSport && 
-      /* ── Attendees ────────────────────────────────────────────── */
-      
-      (
-      <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-bold flex items-center gap-2">
-            <span className="w-1.5 h-4 bg-amber-400 rounded-full inline-block" />
-            Attendees
-            <span className="text-zinc-600 font-normal text-sm">({event.players.length})</span>
-          </h2>
-        </div>
-        {event.players.length === 0 ? (
-          <div className="px-6 py-8 text-center">
-            <p className="text-zinc-600 text-sm">No players have joined yet.</p>
+      {/* ── Attendees (only shown for team sports) ────────────────── */}
+      {isTeamSport && (
+        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/[0.06]">
+            <h2 className="font-bold flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-amber-400 rounded-full inline-block" />
+              Attendees
+              <span className="text-zinc-600 font-normal text-sm">({event.players.length})</span>
+            </h2>
           </div>
-        ) : (
-          <div className="divide-y divide-white/[0.04]">
-            {event.players.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-6 py-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center font-black text-xs text-amber-400 shrink-0">
-                  {p.first_name[0]}{p.last_name[0]}
+          {event.players.length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <p className="text-zinc-600 text-sm">No players have joined yet.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {event.players.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 px-6 py-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center font-black text-xs text-amber-400 shrink-0">
+                    {p.first_name[0]}{p.last_name[0]}
+                  </div>
+                  <span className="text-sm font-medium">
+                    {p.first_name} {p.last_name}
+                    {p.id === currentUserId && <span className="ml-2 text-xs text-zinc-500">(you)</span>}
+                  </span>
                 </div>
-                <span className="text-sm font-medium">
-                  {p.first_name} {p.last_name}
-                  {p.id === currentUserId && <span className="ml-2 text-xs text-zinc-500">(you)</span>}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      )}    </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
   );
 }

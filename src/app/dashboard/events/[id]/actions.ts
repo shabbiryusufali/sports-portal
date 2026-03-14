@@ -27,7 +27,12 @@ export async function getEventData(id: string) {
           select: { id: true, first_name: true, last_name: true },
         },
         matches: {
-          include: { team_a: true, team_b: true },
+          include: {
+            team_a: true,
+            team_b: true,
+            player_a: { select: { first_name: true, last_name: true } },
+            player_b: { select: { first_name: true, last_name: true } },
+          },
           orderBy: { match_date: "asc" },
         },
       },
@@ -45,6 +50,12 @@ export async function getEventData(id: string) {
     orderBy: { name: "asc" },
   });
 
+  // All players available for individual sport match creation
+  const playersInSport = await prisma.player.findMany({
+    select: { id: true, first_name: true, last_name: true },
+    orderBy: { first_name: "asc" },
+  });
+
   const canManage = event.organizer_id === session.user.id || (user?.is_admin ?? false);
 
   const playerProfile = await prisma.player.findUnique({
@@ -58,6 +69,7 @@ export async function getEventData(id: string) {
     event,
     canManage,
     teamsInSport,
+    playersInSport,
     currentUserId: session.user.id,
     hasPlayerProfile,
     isJoined,
@@ -123,8 +135,10 @@ export async function removeTeamFromEvent(
 export async function addMatch(
   eventId: string,
   data: {
-    teamAId: string;
-    teamBId: string;
+    teamAId?: string;
+    teamBId?: string;
+    playerAId?: string;
+    playerBId?: string;
     matchDate: string;
     matchType: "FRIENDLY" | "TOURNAMENT";
   },
@@ -132,10 +146,24 @@ export async function addMatch(
   try {
     await requireOrganizerOrAdmin(eventId);
 
-    if (!data.teamAId || !data.teamBId)
-      throw new Error("Both teams are required.");
-    if (data.teamAId === data.teamBId)
-      throw new Error("Teams must be different.");
+    const isTeamMatch = !!data.teamAId || !!data.teamBId;
+    const isPlayerMatch = !!data.playerAId || !!data.playerBId;
+
+    // FIX: validate based on which IDs were actually supplied instead of
+    // always requiring teamAId/teamBId (which broke individual sport events)
+    if (isTeamMatch) {
+      if (!data.teamAId || !data.teamBId)
+        throw new Error("Both teams are required.");
+      if (data.teamAId === data.teamBId)
+        throw new Error("Teams must be different.");
+    } else if (isPlayerMatch) {
+      if (!data.playerAId || !data.playerBId)
+        throw new Error("Both players are required.");
+      if (data.playerAId === data.playerBId)
+        throw new Error("Players must be different.");
+    } else {
+      throw new Error("Either two teams or two players are required.");
+    }
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -149,12 +177,14 @@ export async function addMatch(
 
     await prisma.match.create({
       data: {
-        event_id: eventId,
-        team_a_id: data.teamAId,
-        team_b_id: data.teamBId,
+        sport_id:    event.sport_id,
+        event_id:    eventId,
+        team_a_id:   data.teamAId   ?? null,
+        team_b_id:   data.teamBId   ?? null,
+        player_a_id: data.playerAId ?? null,
+        player_b_id: data.playerBId ?? null,
         match_date,
-        match_type: data.matchType,
-        sport_id: event.sport_id,
+        match_type:  data.matchType,
       },
     });
 
@@ -188,8 +218,6 @@ export async function startMatch(
   }
 }
 
-// ── Score a goal (increment by 1) ─────────────────────────────────────────────
-
 export async function scoreGoal(
   matchId: string,
   eventId: string,
@@ -214,8 +242,6 @@ export async function scoreGoal(
     return { success: false, message: e.message };
   }
 }
-
-// ── Undo last score (decrement by 1) ─────────────────────────────────────────
 
 export async function undoScore(
   matchId: string,
@@ -246,11 +272,6 @@ export async function undoScore(
   }
 }
 
-// ── Set score directly (overwrite both values) ────────────────────────────────
-//
-// Works on ONGOING and COMPLETED matches so admins/organisers can correct
-// scores after the fact.
-
 export async function setScore(
   matchId: string,
   eventId: string,
@@ -276,10 +297,7 @@ export async function setScore(
 
     await prisma.match.update({
       where: { id: matchId },
-      data: {
-        score_team_a: scoreA,
-        score_team_b: scoreB,
-      },
+      data: { score_team_a: scoreA, score_team_b: scoreB },
     });
     revalidatePath(`/dashboard/events/${eventId}`);
     return { success: true };
@@ -287,8 +305,6 @@ export async function setScore(
     return { success: false, message: e.message };
   }
 }
-
-// ── Complete match ────────────────────────────────────────────────────────────
 
 export async function completeMatch(
   matchId: string,
@@ -307,8 +323,6 @@ export async function completeMatch(
   }
 }
 
-// ── Cancel match ──────────────────────────────────────────────────────────────
-
 export async function cancelMatch(
   matchId: string,
   eventId: string,
@@ -326,8 +340,6 @@ export async function cancelMatch(
   }
 }
 
-// ── Event status ──────────────────────────────────────────────────────────────
-
 export async function updateEventStatus(
   eventId: string,
   status: "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED",
@@ -342,14 +354,11 @@ export async function updateEventStatus(
   }
 }
 
-// ── Join / Leave event (individual player) ────────────────────────────────────
-
 export async function joinEvent(
   eventId: string,
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Not authenticated");
     if (!session?.user?.id) throw new Error("Not authenticated");
 
     const player = await prisma.player.findUnique({

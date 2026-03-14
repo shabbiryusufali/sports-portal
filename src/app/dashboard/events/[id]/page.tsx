@@ -151,8 +151,17 @@ export default async function EventPage({ params }: Props) {
                 match_date: m.match_date.toISOString(),
                 score_team_a: m.score_team_a,
                 score_team_b: m.score_team_b,
-                team_a: { id: m.team_a.id, name: m.team_a.name },
-                team_b: { id: m.team_b.id, name: m.team_b.name },
+                // FIX: team_a/team_b are now nullable (individual sport matches
+                // won't have them), so pass null instead of crashing on .id/.name
+                team_a: m.team_a ? { name: m.team_a.name } : null,
+                team_b: m.team_b ? { name: m.team_b.name } : null,
+                // FIX: pass player_a/player_b which were missing entirely before
+                player_a: m.player_a
+                  ? { first_name: m.player_a.first_name, last_name: m.player_a.last_name }
+                  : null,
+                player_b: m.player_b
+                  ? { first_name: m.player_b.first_name, last_name: m.player_b.last_name }
+                  : null,
               })),
             }}
             canManage={canManage}
