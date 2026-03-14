@@ -306,15 +306,18 @@ export async function setScore(
   }
 }
 
+// ── Replace completeMatch in src/app/dashboard/events/[id]/actions.ts ────────
+
 export async function completeMatch(
   matchId: string,
   eventId: string,
+  resultType: "NORMAL" | "OVERTIME" | "TIEBREAKER" = "NORMAL",
 ): Promise<{ success: boolean; message?: string }> {
   try {
     await requireOrganizerOrAdmin(eventId);
     await prisma.match.update({
       where: { id: matchId },
-      data: { status: "COMPLETED" },
+      data: { status: "COMPLETED", result_type: resultType },
     });
     revalidatePath(`/dashboard/events/${eventId}`);
     return { success: true };

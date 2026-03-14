@@ -2,20 +2,21 @@ import { auth } from "@/api/auth/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTeamDetail } from "./actions";
+import TeamDetailClient from "./TeamDetailClient";
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function TeamDetailPage({ params }: Props) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/login");
 
-  const data = await getTeamDetail(params.id);
+  const { id } = await params;
+  const data = await getTeamDetail(id);
   if (!data) redirect("/dashboard/teams");
 
-  const { team, allMatches, stats, isMember, isCaptain } = data;
-
+  const { team, allMatches, stats, isMember, isCaptain, isAdmin } = data;
   const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
 
   const resultConfig = {
@@ -26,10 +27,13 @@ export default async function TeamDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#080810] text-white">
+      {/* Nav — logo links home */}
       <nav className="sticky top-0 z-10 backdrop-blur-md bg-[#080810]/90 border-b border-white/5 px-6 h-16 flex items-center gap-4">
-        <Link href="/dashboard/teams" className="text-zinc-500 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-xl transition text-sm">
-          ← Teams
+        <Link href="/dashboard" className="text-xl font-black tracking-tighter mr-2">
+          SPORTS<span className="text-[#00ff87]">PORTAL</span>
         </Link>
+        <span className="text-white/10">/</span>
+        <Link href="/dashboard/teams" className="text-zinc-500 hover:text-white transition text-sm">Teams</Link>
         <span className="text-white/10">/</span>
         <span className="text-sm text-zinc-300 font-medium truncate">{team.name}</span>
         {isCaptain && (
@@ -62,11 +66,11 @@ export default async function TeamDetailPage({ params }: Props) {
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
-            { label: "Played",   value: stats.played,           color: "text-white" },
-            { label: "Wins",     value: stats.wins,             color: "text-[#00ff87]" },
-            { label: "Losses",   value: stats.losses,           color: "text-red-400" },
-            { label: "Draws",    value: stats.draws,            color: "text-zinc-400" },
-            { label: "Win Rate", value: `${winRate}%`,          color: winRate >= 50 ? "text-[#00ff87]" : "text-zinc-300" },
+            { label: "Played",   value: stats.played,  color: "text-white" },
+            { label: "Wins",     value: stats.wins,    color: "text-[#00ff87]" },
+            { label: "Losses",   value: stats.losses,  color: "text-red-400" },
+            { label: "Draws",    value: stats.draws,   color: "text-zinc-400" },
+            { label: "Win Rate", value: `${winRate}%`, color: winRate >= 50 ? "text-[#00ff87]" : "text-red-400" },
           ].map((s) => (
             <div key={s.label} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 text-center">
               <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
@@ -75,7 +79,6 @@ export default async function TeamDetailPage({ params }: Props) {
           ))}
         </div>
 
-        {/* Goals for/against */}
         {stats.played > 0 && (
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex items-center gap-4">
@@ -95,9 +98,8 @@ export default async function TeamDetailPage({ params }: Props) {
           </div>
         )}
 
-        {/* Two column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Roster */}
+          {/* Roster + transfer captaincy */}
           <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/[0.06]">
               <h2 className="font-bold flex items-center gap-2">
@@ -115,53 +117,48 @@ export default async function TeamDetailPage({ params }: Props) {
                       {(member.user.name ?? member.user.email).slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">
-                        {member.first_name} {member.last_name}
-                      </p>
-                      <p className="text-zinc-600 text-xs truncate">{member.user.email}</p>
+                      <p className="font-semibold text-sm truncate">{member.user.name ?? member.user.email}</p>
+                      {isCap && <p className="text-xs text-[#00ff87]">Captain</p>}
                     </div>
-                    {isCap && (
-                      <span className="text-xs font-bold text-[#00ff87] bg-[#00ff87]/10 px-2.5 py-1 rounded-lg border border-[#00ff87]/20">
-                        Captain
-                      </span>
-                    )}
                   </div>
                 );
               })}
             </div>
+
+            {/* Transfer captaincy — only shown to current captain or admin */}
+            {(isCaptain || isAdmin) && team.members.length > 1 && (
+              <div className="px-6 py-4 border-t border-white/[0.06]">
+                <TeamDetailClient
+                  teamId={team.id}
+                  members={team.members
+                    .filter((m) => m.id !== team.captain_id)
+                    .map((m) => ({ id: m.id, name: m.user.name ?? m.user.email }))}
+                />
+              </div>
+            )}
           </section>
 
-          {/* Recent Events */}
+          {/* Events */}
           <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/[0.06]">
               <h2 className="font-bold flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-purple-400 rounded-full inline-block" />
-                Recent Events
+                <span className="w-1.5 h-4 bg-purple-500 rounded-full inline-block" />
+                Events
               </h2>
             </div>
             {team.events.length === 0 ? (
-              <div className="px-6 py-10 text-center">
-                <p className="text-zinc-600 text-sm">No events yet.</p>
-              </div>
+              <div className="px-6 py-8 text-center"><p className="text-zinc-600 text-sm">No events yet.</p></div>
             ) : (
               <div className="divide-y divide-white/[0.04]">
                 {team.events.map((e) => (
                   <Link key={e.id} href={`/dashboard/events/${e.id}`}
-                    className="flex items-center gap-4 px-6 py-3.5 hover:bg-white/[0.03] transition group">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 ${
-                      e.event_type === "GAME" ? "bg-blue-500/10" :
-                      e.event_type === "TOURNAMENT" ? "bg-purple-500/10" : "bg-zinc-800"
-                    }`}>
-                      {e.event_type === "GAME" ? "⚡" : e.event_type === "TOURNAMENT" ? "🏆" : "🏃"}
-                    </div>
+                    className="flex items-center gap-3 px-6 py-3 hover:bg-white/[0.03] transition group">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm group-hover:text-[#00ff87] transition truncate">{e.name}</p>
-                      <p className="text-zinc-600 text-xs">
-                        {new Date(e.start_time).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
+                      <p className="text-zinc-600 text-xs">{e.sport.name} · {new Date(e.start_time).toLocaleDateString()}</p>
                     </div>
-                    <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-semibold border ${
-                      e.status === "ONGOING" ? "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20" :
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-lg border ${
+                      e.status === "ONGOING"   ? "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20" :
                       e.status === "COMPLETED" ? "text-zinc-400 bg-zinc-800 border-zinc-700" :
                       "text-blue-400 bg-blue-500/10 border-blue-500/20"
                     }`}>
@@ -198,7 +195,7 @@ export default async function TeamDetailPage({ params }: Props) {
                       {rc.label}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">vs {m.opponent.name}</p>
+                      <p className="font-semibold text-sm">vs {m.opponent?.name}</p>
                       {m.event && (
                         <Link href={`/dashboard/events/${m.event.id}`} className="text-xs text-zinc-600 hover:text-zinc-400 transition">
                           {m.event.name}
@@ -207,14 +204,11 @@ export default async function TeamDetailPage({ params }: Props) {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-black text-lg tabular-nums">
-                        <span className={m.result === "W" ? "text-[#00ff87]" : m.result === "L" ? "text-red-400" : "text-zinc-300"}>
+                        <span className={m.result === "W" ? "text-[#00ff87]" : m.result === "L" ? "text-red-400" : "text-zinc-400"}>
                           {m.scoreFor}
                         </span>
                         <span className="text-zinc-700 mx-1">–</span>
                         <span className="text-zinc-400">{m.scoreAgainst}</span>
-                      </p>
-                      <p className="text-zinc-600 text-xs">
-                        {new Date(m.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </p>
                     </div>
                   </div>

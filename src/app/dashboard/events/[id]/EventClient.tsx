@@ -756,47 +756,62 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
                   </div>
 
                   {/* Match lifecycle buttons */}
-                  {canManage && !isDone && (
-                    <div className="flex items-center gap-2 justify-end flex-wrap pt-2 border-t border-white/[0.04]">
-                      {status === "SCHEDULED" && (
-                        <button
-                          disabled={pending}
-                          onClick={() => act(
-                            () => startMatch(match.id, event.id),
-                            () => {
-                              setMatchStatuses((p) => ({ ...p, [match.id]: "ONGOING" }));
-                              if (eventStatus === "SCHEDULED") setEventStatus("ONGOING");
-                            }
-                          )}
-                          className="text-xs font-semibold bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/30 px-4 py-1.5 rounded-lg hover:bg-[#00ff87]/30 transition disabled:opacity-40"
-                        >
-                          ▶ Start Match
-                        </button>
-                      )}
-                      {isOngoing && (
-                        <button
-                          disabled={pending}
-                          onClick={() => act(
-                            () => completeMatch(match.id, event.id),
-                            () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" }))
-                          )}
-                          className="text-xs font-semibold bg-zinc-700 text-zinc-200 border border-zinc-600 px-4 py-1.5 rounded-lg hover:bg-zinc-600 transition disabled:opacity-40"
-                        >
-                          ✓ Complete
-                        </button>
-                      )}
-                      <button
-                        disabled={pending}
-                        onClick={() => act(
-                          () => cancelMatch(match.id, event.id),
-                          () => setMatchStatuses((p) => ({ ...p, [match.id]: "CANCELLED" }))
-                        )}
-                        className="text-xs font-semibold text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
-                      >
-                        ✕ Cancel
-                      </button>
-                    </div>
-                  )}
+                  
+{canManage && !isDone && (
+  <div className="flex items-center gap-2 justify-end flex-wrap pt-2 border-t border-white/[0.04]">
+    {status === "SCHEDULED" && (
+      <button
+        disabled={pending}
+        onClick={() => act(
+          () => startMatch(match.id, event.id),
+          () => {
+            setMatchStatuses((p) => ({ ...p, [match.id]: "ONGOING" }));
+            if (eventStatus === "SCHEDULED") setEventStatus("ONGOING");
+          }
+        )}
+        className="text-xs font-semibold bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/30 px-4 py-1.5 rounded-lg hover:bg-[#00ff87]/30 transition disabled:opacity-40"
+      >
+        ▶ Start Match
+      </button>
+    )}
+    {isOngoing && (
+      <>
+        <button
+          disabled={pending}
+          onClick={() => act(
+            () => completeMatch(match.id, event.id, "NORMAL"),
+            () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" }))
+          )}
+          className="text-xs font-semibold bg-zinc-700 text-zinc-200 border border-zinc-600 px-4 py-1.5 rounded-lg hover:bg-zinc-600 transition disabled:opacity-40"
+        >
+          ✓ Complete
+        </button>
+        <button
+          disabled={pending}
+          onClick={() => act(
+            () => completeMatch(match.id, event.id, "OVERTIME"),
+            () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" }))
+          )}
+          className="text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-lg hover:bg-blue-500/20 transition disabled:opacity-40"
+          title="Winner gets 2 pts, loser gets 1 pt"
+        >
+          ⏱ OT / Tiebreaker
+        </button>
+      </>
+    )}
+    <button
+      disabled={pending}
+      onClick={() => act(
+        () => cancelMatch(match.id, event.id),
+        () => setMatchStatuses((p) => ({ ...p, [match.id]: "CANCELLED" }))
+      )}
+      className="text-xs font-semibold text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
+    >
+      ✕ Cancel
+    </button>
+  </div>
+)}
+ 
                 </div>
               );
             })}
