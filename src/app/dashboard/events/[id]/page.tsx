@@ -10,169 +10,114 @@ interface Props {
 
 export default async function EventPage({ params }: Props) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
 
   const { id } = await params;
   const data = await getEventData(id);
-  if (!data) redirect("/dashboard");
+  if (!data) redirect("/dashboard/events");
 
   const { event, canManage, teamsInSport, currentUserId, hasPlayerProfile, isJoined } = data;
   const isTeamSport = event.sport.is_team_sport;
 
-  const statusConfig = {
-    SCHEDULED: { label: "Scheduled", class: "text-sky-300 bg-sky-500/10 border border-sky-400/20" },
-    ONGOING:   { label: "Live",      class: "text-emerald-300 bg-emerald-500/10 border border-emerald-400/20" },
-    COMPLETED: { label: "Completed", class: "text-zinc-300 bg-zinc-500/10 border border-white/10" },
-    CANCELLED: { label: "Cancelled", class: "text-rose-300 bg-rose-500/10 border border-rose-400/20" },
-  } as const satisfies Record<string, { label: string; class: string }>;
+  const statusCfg = {
+    SCHEDULED: { label: "Scheduled", badgeClass: "badge-blue" },
+    ONGOING:   { label: "Live",      badgeClass: "badge-green" },
+    COMPLETED: { label: "Completed", badgeClass: "badge-zinc" },
+    CANCELLED: { label: "Cancelled", badgeClass: "badge-red" },
+  } as const;
 
-  const typeConfig = {
-    PRACTICE:   { label: "Practice",   icon: "🏃", class: "text-zinc-200 bg-white/5 border border-white/10" },
-    GAME:       { label: "Game",       icon: "⚡", class: "text-sky-300 bg-sky-500/10 border border-sky-400/20" },
-    TOURNAMENT: { label: "Tournament", icon: "🏆", class: "text-violet-300 bg-violet-500/10 border border-violet-400/20" },
-  } as const satisfies Record<string, { label: string; icon: string; class: string }>;
+  const typeCfg = {
+    PRACTICE:   { label: "Practice",   icon: "🏃", badgeClass: "badge-zinc" },
+    GAME:       { label: "Game",       icon: "⚡", badgeClass: "badge-blue" },
+    TOURNAMENT: { label: "Tournament", icon: "🏆", badgeClass: "badge-purple" },
+  } as const;
 
-  const sc = statusConfig[event.status];
-  const tc = typeConfig[event.event_type];
+  const sc = statusCfg[event.status as keyof typeof statusCfg];
+  const tc = typeCfg[event.event_type as keyof typeof typeCfg];
 
   return (
-    <div className="min-h-screen bg-[#080810] text-white">
-      {/* Nav */}
-      <nav className="sticky top-0 z-10 backdrop-blur-md bg-[#080810]/90 border-b border-white/5 px-6 h-16 flex items-center gap-3">
-        <Link
-          href="/dashboard/events"
-          className="text-zinc-500 hover:text-white transition text-sm flex items-center gap-1.5"
-        >
-          ← Events
-        </Link>
-        <span className="text-white/10">/</span>
-        <span className="text-sm text-zinc-300 font-medium truncate max-w-[200px]">
-          {event.name}
-        </span>
-      </nav>
+    <div style={{ padding: "32px 32px 48px", maxWidth: 900, width: "100%" }}>
 
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
-        <section>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border ${sc.class}`}>
-              {event.status === "ONGOING" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              )}
-              {sc.label}
-            </span>
-            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${tc.class}`}>
-              <span>{tc.icon}</span>
-              <span>{tc.label}</span>
-            </span>
-          </div>
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28, fontSize: "0.8125rem" }}>
+        <Link href="/dashboard/events" style={{ color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Events</Link>
+        <span style={{ color: "var(--text-muted)" }}>›</span>
+        <span style={{ color: "var(--text-secondary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 260 }}>{event.name}</span>
+      </div>
 
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
-            {event.name}
-          </h1>
-          <p className="mt-2 text-base text-zinc-400">{event.sport.name}</p>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <span className={`badge ${sc.badgeClass}`} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {event.status === "ONGOING" && (
+              <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
+            )}
+            {sc.label}
+          </span>
+          <span className={`badge ${tc.badgeClass}`}>{tc.icon} {tc.label}</span>
+          {canManage && <span className="badge badge-amber">Organizer</span>}
+        </div>
 
-          {event.description && (
-            <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300">
-              {event.description}
-            </p>
-          )}
-        </section>
+        <h1 className="sp-page-title">{event.name}</h1>
+        <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", marginTop: 6 }}>{event.sport.name}</p>
 
-        {/* Meta grid */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              icon: "🗓",
-              label: "Start",
-              value: new Date(event.start_time).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }),
-            },
-            {
-              icon: "⏱",
-              label: "End",
-              value: new Date(event.end_time).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }),
-            },
-            {
-              icon: "📍",
-              label: "Location",
-              value: event.location ?? "TBD",
-            },
-            {
-              icon: "👤",
-              label: "Organizer",
-              value: event.organizer.name ?? event.organizer.email,
-            },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-2xl border border-white/10 bg-white/[0.045] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.15)] transition hover:bg-white/[0.06]"
-            >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] text-lg">
-                {item.icon}
-              </div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {item.label}
-              </p>
-              <p className="text-sm font-semibold leading-6 text-zinc-100">
-                {item.value}
-              </p>
+        {event.description && (
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: 12, lineHeight: 1.7, maxWidth: 640 }}>
+            {event.description}
+          </p>
+        )}
+      </div>
+
+      {/* Meta cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 32 }}>
+        {[
+          { icon: "🗓", label: "Start",     value: new Date(event.start_time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) },
+          { icon: "⏱", label: "End",       value: new Date(event.end_time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) },
+          { icon: "📍", label: "Location",  value: event.location ?? "TBD" },
+          { icon: "👤", label: "Organizer", value: event.organizer.name ?? event.organizer.email },
+        ].map((item) => (
+          <div key={item.label} className="sp-card" style={{ padding: "18px 20px" }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", marginBottom: 10 }}>
+              {item.icon}
             </div>
-          ))}
-        </section>
+            <p className="sp-section-title" style={{ marginBottom: 4 }}>{item.label}</p>
+            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4 }}>{item.value}</p>
+          </div>
+        ))}
+      </div>
 
-        {/* Interactive section */}
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.18)] sm:p-6">
-          <EventClient
-            event={{
-              id: event.id,
-              status: event.status,
-              sport_id: event.sport_id,
-              registration_deadline: event.registration_deadline?.toISOString() ?? null,
-              participants: event.participants.map((t) => ({
-                id: t.id,
-                name: t.name,
-                _count: t._count,
-              })),
-              players: event.players.map((p) => ({
-                id: p.id,
-                first_name: p.first_name,
-                last_name: p.last_name,
-              })),
-              matches: event.matches.map((m) => ({
-                id: m.id,
-                status: m.status,
-                match_type: m.match_type,
-                match_date: m.match_date.toISOString(),
-                score_team_a: m.score_team_a,
-                score_team_b: m.score_team_b,
-                // FIX: team_a/team_b are now nullable (individual sport matches
-                // won't have them), so pass null instead of crashing on .id/.name
-                team_a: m.team_a ? { name: m.team_a.name } : null,
-                team_b: m.team_b ? { name: m.team_b.name } : null,
-                // FIX: pass player_a/player_b which were missing entirely before
-                player_a: m.player_a
-                  ? { first_name: m.player_a.first_name, last_name: m.player_a.last_name }
-                  : null,
-                player_b: m.player_b
-                  ? { first_name: m.player_b.first_name, last_name: m.player_b.last_name }
-                  : null,
-              })),
-            }}
-            canManage={canManage}
-            teamsInSport={teamsInSport.map((t) => ({ id: t.id, name: t.name }))}
-            hasPlayerProfile={hasPlayerProfile}
-            isJoined={isJoined}
-            currentUserId={currentUserId}
-            isTeamSport={isTeamSport}
-          />
-        </section>
-      </main>
+      {/* Interactive section */}
+      <EventClient
+        event={{
+          id: event.id,
+          status: event.status,
+          sport_id: event.sport_id,
+          registration_deadline: event.registration_deadline?.toISOString() ?? null,
+          participants: event.participants.map((t) => ({
+            id: t.id, name: t.name, _count: t._count,
+          })),
+          players: event.players.map((p) => ({
+            id: p.id, first_name: p.first_name, last_name: p.last_name,
+          })),
+          matches: event.matches.map((m) => ({
+            id: m.id,
+            status: m.status,
+            match_type: m.match_type,
+            match_date: m.match_date.toISOString(),
+            score_team_a: m.score_team_a,
+            score_team_b: m.score_team_b,
+            team_a:   m.team_a   ? { name: m.team_a.name }   : null,
+            team_b:   m.team_b   ? { name: m.team_b.name }   : null,
+            player_a: m.player_a ? { first_name: m.player_a.first_name, last_name: m.player_a.last_name } : null,
+            player_b: m.player_b ? { first_name: m.player_b.first_name, last_name: m.player_b.last_name } : null,
+          })),
+        }}
+        canManage={canManage}
+        teamsInSport={teamsInSport.map((t) => ({ id: t.id, name: t.name }))}
+        hasPlayerProfile={hasPlayerProfile}
+        isJoined={isJoined}
+        currentUserId={currentUserId}
+        isTeamSport={isTeamSport}
+      />
     </div>
   );
 }

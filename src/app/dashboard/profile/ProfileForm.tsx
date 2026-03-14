@@ -24,14 +24,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// ── Player profile ─────────────────────────────────────────────────────────
+
 function PlayerSection({ existing, userName }: { existing: Player; userName: string | null }) {
   const [pending, start] = useTransition();
   const [error, setError]     = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const dobValue = existing?.date_of_birth
-    ? new Date(existing.date_of_birth).toISOString().split("T")[0]
-    : "";
+  const dobValue     = existing?.date_of_birth ? new Date(existing.date_of_birth).toISOString().split("T")[0] : "";
   const nameParts    = (userName ?? "").trim().split(" ");
   const defaultFirst = existing?.first_name ?? nameParts[0] ?? "";
   const defaultLast  = existing?.last_name  ?? nameParts.slice(1).join(" ") ?? "";
@@ -82,18 +82,23 @@ function PlayerSection({ existing, userName }: { existing: Player; userName: str
   );
 }
 
+// ── Change email — requires current password to confirm ────────────────────
+
 function EmailSection() {
   const [pending, start] = useTransition();
-  const [email, setEmail]     = useState("");
-  const [error, setError]     = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [newEmail,  setNewEmail]  = useState("");
+  const [password,  setPassword]  = useState("");
+  const [error,     setError]     = useState<string | null>(null);
+  const [success,   setSuccess]   = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(false);
+    e.preventDefault();
+    setError(null); setSuccess(false);
     start(async () => {
-      const res = await updateEmail(email);
+      // updateEmail(newEmail, currentPassword) — both args required
+      const res = await updateEmail(newEmail, password);
       if (!res.success) setError(res.message ?? "Something went wrong.");
-      else { setSuccess(true); setEmail(""); }
+      else { setSuccess(true); setNewEmail(""); setPassword(""); }
     });
   }
 
@@ -101,10 +106,22 @@ function EmailSection() {
     <Section title="Change Email">
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {error   && <div className="sp-notice sp-notice-err">{error}</div>}
-        {success && <div className="sp-notice sp-notice-ok">Email updated!</div>}
+        {success && <div className="sp-notice sp-notice-ok">Email updated! Sign in again to use the new address.</div>}
         <div>
           <label className="sp-label">New Email Address</label>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="new@example.com" className="sp-input" />
+          <input
+            type="email" required value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="new@example.com" className="sp-input"
+          />
+        </div>
+        <div>
+          <label className="sp-label">Current Password (to confirm)</label>
+          <input
+            type="password" required value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your current password" className="sp-input"
+          />
         </div>
         <button type="submit" disabled={pending} className="sp-btn-secondary">
           {pending ? "Updating…" : "Update Email"}
@@ -114,16 +131,19 @@ function EmailSection() {
   );
 }
 
+// ── Change password ────────────────────────────────────────────────────────
+
 function PasswordSection() {
   const [pending, start] = useTransition();
   const [current, setCurrent]   = useState("");
-  const [next, setNext]         = useState("");
+  const [next,    setNext]      = useState("");
   const [confirm, setConfirm]   = useState("");
-  const [error, setError]       = useState<string | null>(null);
+  const [error,   setError]     = useState<string | null>(null);
   const [success, setSuccess]   = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(false);
+    e.preventDefault();
+    setError(null); setSuccess(false);
     start(async () => {
       const res = await updatePassword(current, next, confirm);
       if (!res.success) setError(res.message ?? "Something went wrong.");

@@ -2,18 +2,10 @@
 
 import { useState, useTransition, useRef } from "react";
 import {
-  addTeamToEvent,
-  removeTeamFromEvent,
-  addMatch,
-  startMatch,
-  scoreGoal,
-  undoScore,
-  setScore,
-  completeMatch,
-  cancelMatch,
-  updateEventStatus,
-  joinEvent,
-  leaveEvent,
+  addTeamToEvent, removeTeamFromEvent,
+  addMatch, startMatch, scoreGoal, undoScore, setScore,
+  completeMatch, cancelMatch, updateEventStatus,
+  joinEvent, leaveEvent,
 } from "./actions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -23,28 +15,18 @@ type MatchStatus = "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED";
 type EventStatus = "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED";
 
 type Match = {
-  id: string;
-  status: MatchStatus;
-  match_type: "FRIENDLY" | "TOURNAMENT";
-  match_date: string;
-  score_team_a: number;
-  score_team_b: number;
-  team_a: { name: string } | null;
-  team_b: { name: string } | null;
+  id: string; status: MatchStatus; match_type: "FRIENDLY" | "TOURNAMENT";
+  match_date: string; score_team_a: number; score_team_b: number;
+  team_a: { name: string } | null; team_b: { name: string } | null;
   player_a: { first_name: string; last_name: string } | null;
   player_b: { first_name: string; last_name: string } | null;
 };
 
 type Participant = Team & { _count: { members: number } };
 
-// Simple participant used in AddMatchForm (works for both teams and players)
-type SimpleParticipant = { id: string; name: string };
-
 interface Props {
   event: {
-    id: string;
-    status: EventStatus;
-    sport_id: string;
+    id: string; status: EventStatus; sport_id: string;
     participants: Participant[];
     players: { id: string; first_name: string; last_name: string }[];
     registration_deadline: string | null;
@@ -58,120 +40,60 @@ interface Props {
   isTeamSport: boolean;
 }
 
-// ── Shared input style ────────────────────────────────────────────────────────
-
-const input =
-  "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-[#00ff87]/50 transition";
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function matchSideName(
-  team: { name: string } | null,
-  player: { first_name: string; last_name: string } | null
-): string {
+function sideName(team: { name: string } | null, player: { first_name: string; last_name: string } | null) {
   if (team) return team.name;
   if (player) return `${player.first_name} ${player.last_name}`;
   return "Unknown";
 }
-
-function matchSideInitials(
-  team: { name: string } | null,
-  player: { first_name: string; last_name: string } | null
-): string {
+function sideInitials(team: { name: string } | null, player: { first_name: string; last_name: string } | null) {
   if (team) return team.name.slice(0, 2).toUpperCase();
   if (player) return `${player.first_name[0]}${player.last_name[0]}`.toUpperCase();
   return "??";
 }
 
+const STATUS_BADGE: Record<MatchStatus, string> = {
+  SCHEDULED: "badge-blue", ONGOING: "badge-green", COMPLETED: "badge-zinc", CANCELLED: "badge-red",
+};
+
 // ── Edit Score Modal ──────────────────────────────────────────────────────────
 
-function EditScoreModal({
-  match,
-  eventId,
-  scoreA,
-  scoreB,
-  onClose,
-  onSaved,
-}: {
-  match: Match;
-  eventId: string;
-  scoreA: number;
-  scoreB: number;
-  onClose: () => void;
-  onSaved: (a: number, b: number) => void;
+function EditScoreModal({ match, eventId, scoreA: initA, scoreB: initB, onClose, onSaved }: {
+  match: Match; eventId: string; scoreA: number; scoreB: number;
+  onClose: () => void; onSaved: (a: number, b: number) => void;
 }) {
-  const [a, setA] = useState(String(scoreA));
-  const [b, setB] = useState(String(scoreB));
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [a, setA] = useState(initA);
+  const [b, setB] = useState(initB);
+  const [pending, start] = useTransition();
 
-  const numA = parseInt(a, 10);
-  const numB = parseInt(b, 10);
-  const valid = !isNaN(numA) && !isNaN(numB) && numA >= 0 && numB >= 0;
-
-  const nameA = matchSideName(match.team_a, match.player_a);
-  const nameB = matchSideName(match.team_b, match.player_b);
-
-  async function handleSave() {
-    if (!valid) return;
-    setSaving(true);
-    setErr(null);
-    const res = await setScore(match.id, eventId, numA, numB);
-    if (res.success) {
-      onSaved(numA, numB);
+  function save() {
+    start(async () => {
+      const res = await setScore(match.id, eventId, a, b);
+      if (res.success) onSaved(a, b);
       onClose();
-    } else {
-      setErr(res.message ?? "Failed to update score.");
-      setSaving(false);
-    }
+    });
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-white">Edit Score</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white text-2xl leading-none">×</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div className="sp-card" style={{ padding: 28, width: "100%", maxWidth: 360 }}>
+        <p style={{ fontWeight: 800, fontSize: "1rem", marginBottom: 20 }}>Edit Score</p>
+        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: 16, textAlign: "center" }}>
+          {sideName(match.team_a, match.player_a)} vs {sideName(match.team_b, match.player_b)}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", marginBottom: 24 }}>
+          <input type="number" min={0} value={a} onChange={(e) => setA(+e.target.value)}
+            className="sp-input" style={{ width: 80, textAlign: "center", fontSize: "1.5rem", fontWeight: 900 }} />
+          <span style={{ fontSize: "1.25rem", color: "var(--text-muted)", fontWeight: 700 }}>–</span>
+          <input type="number" min={0} value={b} onChange={(e) => setB(+e.target.value)}
+            className="sp-input" style={{ width: 80, textAlign: "center", fontSize: "1.5rem", fontWeight: 900 }} />
         </div>
-
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 mb-5">
-          <div className="text-center">
-            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{nameA}</p>
-            <input
-              type="number" min={0} value={a}
-              onChange={(e) => setA(e.target.value)}
-              className="w-full text-center text-3xl font-black bg-zinc-800 border border-zinc-700 rounded-xl py-2 text-white focus:outline-none focus:border-[#00ff87] tabular-nums"
-            />
-          </div>
-          <span className="text-zinc-600 font-bold text-xl pt-5">:</span>
-          <div className="text-center">
-            <p className="text-xs font-semibold text-zinc-400 mb-2 truncate">{nameB}</p>
-            <input
-              type="number" min={0} value={b}
-              onChange={(e) => setB(e.target.value)}
-              className="w-full text-center text-3xl font-black bg-zinc-800 border border-zinc-700 rounded-xl py-2 text-white focus:outline-none focus:border-[#00ff87] tabular-nums"
-            />
-          </div>
-        </div>
-
-        {err && (
-          <p className="text-red-400 text-xs mb-4 bg-red-900/20 border border-red-700/40 px-3 py-2 rounded-lg">{err}</p>
-        )}
-
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm py-2.5 rounded-xl transition">
-            Cancel
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={save} disabled={pending} className="sp-btn-primary" style={{ flex: 1 }}>
+            {pending ? "Saving…" : "Save Score"}
           </button>
-          <button
-            disabled={!valid || saving}
-            onClick={handleSave}
-            className="flex-1 bg-[#00ff87] text-zinc-900 font-bold text-sm py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? "Saving…" : "Save Score"}
-          </button>
+          <button onClick={onClose} className="sp-btn-ghost">Cancel</button>
         </div>
       </div>
     </div>
@@ -180,115 +102,85 @@ function EditScoreModal({
 
 // ── Add Match Form ────────────────────────────────────────────────────────────
 
-function AddMatchForm({
-  eventId,
-  participants,
-  isTeamSport,
-  onAdded,
-}: {
-  eventId: string;
-  participants: SimpleParticipant[];
-  isTeamSport: boolean;
-  onAdded: () => void;
+function AddMatchForm({ eventId, teamsInSport, participants, players, isTeamSport, onAdded }: {
+  eventId: string; teamsInSport: Team[]; participants: Participant[];
+  players: { id: string; first_name: string; last_name: string }[];
+  isTeamSport: boolean; onAdded: () => void;
 }) {
-  // FIX: single set of state vars (was duplicated as sideA/teamA, sideB/teamB)
-  const [sideA, setSideA] = useState(participants[0]?.id ?? "");
-  const [sideB, setSideB] = useState(participants[1]?.id ?? "");
-  const [matchDate, setMatchDate] = useState("");
-  const [matchType, setMatchType] = useState<"FRIENDLY" | "TOURNAMENT">("FRIENDLY");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const options = isTeamSport
+    ? participants.map((t) => ({ id: t.id, name: t.name }))
+    : players.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }));
 
-  const label = isTeamSport ? "Team" : "Player";
-
-  async function handleAdd() {
-    if (!sideA || !sideB || sideA === sideB) {
-      setErr(`Please select two different ${isTeamSport ? "teams" : "players"}.`);
-      return;
-    }
-    setErr(null);
-    setLoading(true); // FIX: was never set to true
-    const res = await addMatch(eventId, {
-      teamAId:   isTeamSport ? sideA : undefined,
-      teamBId:   isTeamSport ? sideB : undefined,
-      playerAId: isTeamSport ? undefined : sideA,
-      playerBId: isTeamSport ? undefined : sideB,
-      matchDate,
-      matchType,
+  function handleSubmit(fd: FormData) {
+    setError(null);
+    start(async () => {
+      const aId = fd.get("side_a") as string;
+      const bId = fd.get("side_b") as string;
+      const matchDate = fd.get("match_date") as string;
+      const matchType = fd.get("match_type") as "FRIENDLY" | "TOURNAMENT";
+      const res = await addMatch(eventId, {
+        teamAId:   isTeamSport ? aId : undefined,
+        teamBId:   isTeamSport ? bId : undefined,
+        playerAId: !isTeamSport ? aId : undefined,
+        playerBId: !isTeamSport ? bId : undefined,
+        matchDate, matchType,
+      });
+      if (!res.success) setError(res.message ?? "Failed to add match.");
+      else onAdded();
     });
-    setLoading(false);
-    if (res.success) {
-      onAdded();
-    } else {
-      setErr(res.message ?? "Failed to add match.");
-    }
-  }
-
-  if (participants.length < 2) {
-    return (
-      <p className="text-zinc-500 text-sm">
-        At least 2 {isTeamSport ? "teams" : "players"} are needed to create a match.
-      </p>
-    );
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-semibold text-zinc-300">New Match</p>
+    <form action={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14, padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
+      <p className="sp-section-title">New Match</p>
+      {error && <div className="sp-notice sp-notice-err">{error}</div>}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
-          {/* FIX: label reflects sport type */}
-          <label className="block text-xs text-zinc-500 mb-1.5">{label} A</label>
-          {/* FIX: value/onChange now use sideA/setSideA (was teamA/setTeamA which was separate state) */}
-          <select value={sideA} onChange={(e) => setSideA(e.target.value)} className={input}>
-            {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <label className="sp-label">{isTeamSport ? "Team A" : "Player A"}</label>
+          <select name="side_a" required className="sp-input" style={{ appearance: "auto" }}>
+            <option value="">Select…</option>
+            {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5">{label} B</label>
-          {/* FIX: value/onChange now use sideB/setSideB */}
-          <select value={sideB} onChange={(e) => setSideB(e.target.value)} className={input}>
-            {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <label className="sp-label">{isTeamSport ? "Team B" : "Player B"}</label>
+          <select name="side_b" required className="sp-input" style={{ appearance: "auto" }}>
+            <option value="">Select…</option>
+            {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5">Date & Time</label>
-          <input type="datetime-local" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} className={input} />
+          <label className="sp-label">Match Date</label>
+          <input name="match_date" type="datetime-local" className="sp-input" />
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5">Type</label>
-          <select value={matchType} onChange={(e) => setMatchType(e.target.value as any)} className={input}>
+          <label className="sp-label">Type</label>
+          <select name="match_type" className="sp-input" style={{ appearance: "auto" }}>
             <option value="FRIENDLY">Friendly</option>
             <option value="TOURNAMENT">Tournament</option>
           </select>
         </div>
       </div>
 
-      {/* FIX: check sideA === sideB (was teamA === teamB which was always empty) */}
-      {sideA === sideB && sideA && (
-        <p className="text-amber-400 text-xs">{label}s must be different.</p>
-      )}
-      {err && <p className="text-red-400 text-xs">{err}</p>}
-
-      <button
-        // FIX: disabled checks sideA/sideB (was teamA/teamB — always disabled)
-        disabled={loading || !sideA || !sideB || sideA === sideB}
-        onClick={handleAdd}
-        className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl text-sm hover:bg-[#00e87a] transition disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {loading ? "Adding…" : "Add Match"}
+      <button type="submit" disabled={pending} className="sp-btn-primary" style={{ alignSelf: "flex-start" }}>
+        {pending ? "Adding…" : "Add Match"}
       </button>
-    </div>
+    </form>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 
-export default function EventClient({ event, canManage, teamsInSport, hasPlayerProfile, isJoined: initialJoined, currentUserId, isTeamSport }: Props) {
+export default function EventClient({
+  event, canManage, teamsInSport, hasPlayerProfile,
+  isJoined: initialJoined, currentUserId, isTeamSport,
+}: Props) {
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [showAddTeam, setShowAddTeam] = useState(false);
@@ -301,6 +193,7 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
   const [matchStatuses, setMatchStatuses] = useState<Record<string, MatchStatus>>(() =>
     Object.fromEntries(event.matches.map((m) => [m.id, m.status]))
   );
+  const [lastScored, setLastScored] = useState<Record<string, "a" | "b">>({});
   const [eventStatus, setEventStatus] = useState<EventStatus>(event.status);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [joined, setJoined] = useState(initialJoined);
@@ -314,7 +207,6 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
     setNotice({ type, msg });
     setTimeout(() => setNotice(null), 3500);
   }
-
   function act(fn: () => Promise<{ success: boolean; message?: string }>, onSuccess?: () => void) {
     start(async () => {
       const res = await fn();
@@ -323,533 +215,336 @@ export default function EventClient({ event, canManage, teamsInSport, hasPlayerP
     });
   }
 
-  // Status badge config
-  const statusBadge: Record<EventStatus, string> = {
-    SCHEDULED: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    ONGOING:   "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20",
-    COMPLETED: "text-zinc-400 bg-zinc-800 border-zinc-700",
-    CANCELLED: "text-red-400 bg-red-500/10 border-red-500/20",
-  };
-
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* ── Flash notice ─────────────────────────────────────────── */}
-      {notice && (
-        <div className={`text-sm px-4 py-3 rounded-xl border ${
-          notice.type === "ok"
-            ? "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20"
-            : "text-red-400 bg-red-500/10 border-red-500/20"
-        }`}>
-          {notice.msg}
-        </div>
-      )}
+      {/* Flash notice */}
+      {notice && <div className={`sp-notice ${notice.type === "ok" ? "sp-notice-ok" : "sp-notice-err"}`}>{notice.msg}</div>}
 
-      {/* ── Edit score modal ──────────────────────────────────────── */}
+      {/* Edit score modal */}
       {editingMatch && (
         <EditScoreModal
-          match={editingMatch}
-          eventId={event.id}
+          match={editingMatch} eventId={event.id}
           scoreA={scores[editingMatch.id]?.a ?? editingMatch.score_team_a}
           scoreB={scores[editingMatch.id]?.b ?? editingMatch.score_team_b}
           onClose={() => setEditingMatch(null)}
-          onSaved={(a, b) => {
-            setScores((prev) => ({ ...prev, [editingMatch.id]: { a, b } }));
-            flash("ok", "Score updated.");
-          }}
+          onSaved={(a, b) => { setScores((p) => ({ ...p, [editingMatch.id]: { a, b } })); flash("ok", "Score updated."); }}
         />
       )}
 
-      {/* ── Join / Leave Event ───────────────────────────────────────────── */}
+      {/* ── Join / Leave (non-managers only) ─────────────────────────────── */}
       {!canManage && (
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-bold text-sm flex items-center gap-2 mb-1">
-                <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
-                Participation
-              </h2>
-              {joined ? (
-                <p className="text-zinc-400 text-sm">You are registered for this event.</p>
-              ) : eventStatus === "COMPLETED" || eventStatus === "CANCELLED" ? (
-                <p className="text-zinc-500 text-sm">This event is no longer accepting registrations.</p>
-              ) : (
-                <p className="text-zinc-400 text-sm">
-                  {hasPlayerProfile
-                    ? "Join this event to participate."
-                    : "Set up your player profile to join events."}
-                </p>
-              )}
-            </div>
-            {eventStatus !== "COMPLETED" && eventStatus !== "CANCELLED" && (
-              joined ? (
-                <button
-                  disabled={joinLoading}
-                  onClick={async () => {
-                    setJoinLoading(true);
-                    const res = await leaveEvent(event.id);
-                    if (res.success) { setJoined(false); flash("ok", "You have left the event."); }
-                    else flash("err", res.message ?? "Failed to leave event.");
-                    setJoinLoading(false);
-                  }}
-                  className="shrink-0 text-sm font-semibold text-red-400 border border-red-500/20 px-5 py-2.5 rounded-xl hover:bg-red-500/10 transition disabled:opacity-40"
-                >
-                  {joinLoading ? "Leaving…" : "Leave Event"}
-                </button>
-              ) : hasPlayerProfile ? (
-                <button
-                  disabled={joinLoading}
-                  onClick={async () => {
-                    setJoinLoading(true);
-                    const res = await joinEvent(event.id);
-                    if (res.success) { setJoined(true); flash("ok", "You have joined the event!"); }
-                    else flash("err", res.message ?? "Failed to join event.");
-                    setJoinLoading(false);
-                  }}
-                  className="shrink-0 bg-[#00ff87] text-zinc-900 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-40"
-                >
-                  {joinLoading ? "Joining…" : "Join Event"}
-                </button>
-              ) : (
-                <a href="/dashboard/profile" className="shrink-0 text-sm font-semibold text-amber-400 border border-amber-400/20 px-5 py-2.5 rounded-xl hover:bg-amber-400/10 transition">
-                  Set Up Profile →
-                </a>
-              )
-            )}
+        <div className="sp-card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 4 }}>Participation</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+              {joined ? "You are registered for this event."
+                : isEventDone ? "This event is no longer accepting registrations."
+                : hasPlayerProfile ? "Join this event to participate."
+                : "Set up your player profile to join events."}
+            </p>
           </div>
-        </section>
+          {!isEventDone && (
+            joined ? (
+              <button
+                disabled={joinLoading}
+                onClick={async () => {
+                  setJoinLoading(true);
+                  const res = await leaveEvent(event.id);
+                  if (res.success) { setJoined(false); flash("ok", "You have left the event."); }
+                  else flash("err", res.message ?? "Failed.");
+                  setJoinLoading(false);
+                }}
+                className="sp-btn-danger"
+                style={{ flexShrink: 0 }}
+              >
+                {joinLoading ? "Leaving…" : "Leave Event"}
+              </button>
+            ) : hasPlayerProfile ? (
+              <button
+                disabled={joinLoading}
+                onClick={async () => {
+                  setJoinLoading(true);
+                  const res = await joinEvent(event.id);
+                  if (res.success) { setJoined(true); flash("ok", "You joined the event!"); }
+                  else flash("err", res.message ?? "Failed.");
+                  setJoinLoading(false);
+                }}
+                className="sp-btn-primary"
+                style={{ flexShrink: 0 }}
+              >
+                {joinLoading ? "Joining…" : "Join Event"}
+              </button>
+            ) : (
+              <a href="/dashboard/profile" className="sp-btn-secondary" style={{ flexShrink: 0, fontSize: "0.8125rem" }}>
+                Set Up Profile →
+              </a>
+            )
+          )}
+        </div>
       )}
 
-      {/* ── Event Status Controls ─────────────────────────────────── */}
+      {/* ── Organizer: Event status ───────────────────────────────────────── */}
       {canManage && (
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-sm flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-zinc-400 rounded-full inline-block" />
-              Event Status
-            </h2>
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${statusBadge[eventStatus]}`}>
-              {eventStatus}
-            </span>
+        <div className="sp-card" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>Event Status</p>
+            <span className={`badge ${STATUS_BADGE[eventStatus]}`}>{eventStatus}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(["SCHEDULED", "ONGOING", "COMPLETED", "CANCELLED"] as const).map((s) => (
               <button
                 key={s}
                 disabled={pending || eventStatus === s}
                 onClick={() => act(() => updateEventStatus(event.id, s), () => setEventStatus(s))}
-                className={`text-xs font-semibold px-4 py-2 rounded-lg border transition disabled:cursor-not-allowed ${
-                  eventStatus === s
-                    ? "bg-[#00ff87]/20 text-[#00ff87] border-[#00ff87]/30 cursor-default"
-                    : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10 disabled:opacity-40"
-                }`}
+                className={eventStatus === s ? "sp-btn-primary" : "sp-btn-secondary"}
+                style={{ fontSize: "0.8rem", padding: "7px 14px", opacity: eventStatus === s ? 1 : undefined }}
               >
-                {s === "SCHEDULED" && "⏰ "}
-                {s === "ONGOING"   && "▶ "}
-                {s === "COMPLETED" && "✓ "}
-                {s === "CANCELLED" && "✕ "}
-                {s.charAt(0) + s.slice(1).toLowerCase()}
+                {s}
               </button>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* ── Participants (team-sport: teams; individual: players) ── */}
-      {isTeamSport ? (
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="font-bold flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
-              Participating Teams
-              <span className="text-zinc-600 font-normal text-sm">({event.participants.length})</span>
+      {/* ── Teams / Participants ──────────────────────────────────────────── */}
+      {isTeamSport && (
+        <section className="sp-card" style={{ overflow: "hidden" }}>
+          <div className="sp-card-header">
+            <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 18, background: "var(--accent)", borderRadius: 3, display: "inline-block" }} />
+              Teams
+              <span style={{ fontWeight: 400, fontSize: "0.8125rem", color: "var(--text-muted)" }}>({event.participants.length})</span>
             </h2>
-            {canManage && !isEventDone && addableTeams.length > 0 && (
-              <button
-                onClick={() => setShowAddTeam((v) => !v)}
-                className="text-xs font-semibold text-[#00ff87] bg-[#00ff87]/10 hover:bg-[#00ff87]/20 px-3 py-1.5 rounded-lg transition"
-              >
+            {canManage && !isEventDone && (
+              <button onClick={() => setShowAddTeam((v) => !v)} className="sp-btn-secondary" style={{ fontSize: "0.8125rem", padding: "7px 14px" }}>
                 {showAddTeam ? "Cancel" : "+ Add Team"}
               </button>
             )}
           </div>
 
-          {showAddTeam && (
-            <div className="px-6 py-4 border-b border-white/[0.06] flex gap-3">
-              <select ref={addTeamRef} className={`${input} flex-1`} defaultValue={addableTeams[0]?.id ?? ""}>
-                {addableTeams.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
+          {showAddTeam && addableTeams.length > 0 && (
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", display: "flex", gap: 10 }}>
+              <select ref={addTeamRef} className="sp-select" style={{ flex: 1 }}>
+                {addableTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
               <button
                 disabled={pending}
                 onClick={() => {
                   const id = addTeamRef.current?.value;
                   if (!id) return;
-                  act(() => addTeamToEvent(event.id, id), () => {
-                    flash("ok", "Team added!");
-                    setShowAddTeam(false);
-                  });
+                  act(() => addTeamToEvent(event.id, id), () => { setShowAddTeam(false); flash("ok", "Team added. Reload to see it."); });
                 }}
-                className="bg-[#00ff87] text-zinc-900 font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-40"
-              >
-                Add
-              </button>
+                className="sp-btn-primary" style={{ padding: "10px 18px" }}
+              >Add</button>
             </div>
+          )}
+          {showAddTeam && addableTeams.length === 0 && (
+            <p style={{ padding: "14px 24px", fontSize: "0.875rem", color: "var(--text-secondary)", borderBottom: "1px solid var(--border)" }}>All eligible teams are already added.</p>
           )}
 
           {event.participants.length === 0 ? (
-            <div className="px-6 py-10 text-center">
-              <p className="text-4xl mb-3">👥</p>
-              <p className="text-zinc-500 text-sm">
+            <div style={{ padding: "48px 24px", textAlign: "center" }}>
+              <p style={{ fontSize: "2rem", marginBottom: 10 }}>👥</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
                 {canManage ? "No teams yet — add some above." : "No teams participating."}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {event.participants.map((team) => (
-                <div key={team.id} className="flex items-center gap-4 px-6 py-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xs text-[#00ff87] shrink-0">
-                    {team.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">{team.name}</p>
-                    <p className="text-zinc-600 text-xs">{team._count.members} member{team._count.members !== 1 ? "s" : ""}</p>
-                  </div>
-                  {canManage && !isEventDone && (
-                    <button
-                      disabled={pending}
-                      onClick={() => act(() => removeTeamFromEvent(event.id, team.id), () => flash("ok", "Team removed."))}
-                      className="text-zinc-600 hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
-                    >
-                      Remove
-                    </button>
-                  )}
+            event.participants.map((team) => (
+              <div key={team.id} className="sp-list-item" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="sp-avatar" style={{ width: 36, height: 36 }}>{team.name.slice(0, 2).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{team.name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{team._count.members} member{team._count.members !== 1 ? "s" : ""}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : (
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="font-bold flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
-              Participants
-              <span className="text-zinc-600 font-normal text-sm">({event.players.length})</span>
-            </h2>
-          </div>
-          {event.players.length === 0 ? (
-            <div className="px-6 py-10 text-center">
-              <p className="text-4xl mb-3">👥</p>
-              <p className="text-zinc-500 text-sm">
-                {canManage ? "No participants yet." : "Be the first to join!"}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {event.players.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 px-6 py-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xs text-[#00ff87] shrink-0">
-                    {p.first_name[0]}{p.last_name[0]}
-                  </div>
-                  <span className="text-sm font-medium flex-1">
-                    {p.first_name} {p.last_name}
-                    {p.id === currentUserId && (
-                      <span className="ml-2 text-xs text-zinc-500">(you)</span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
+                {canManage && !isEventDone && (
+                  <button
+                    disabled={pending}
+                    onClick={() => act(() => removeTeamFromEvent(event.id, team.id), () => flash("ok", "Team removed."))}
+                    className="sp-btn-danger" style={{ fontSize: "0.75rem", padding: "5px 10px" }}
+                  >Remove</button>
+                )}
+              </div>
+            ))
           )}
         </section>
       )}
 
-      {/* ── Matches ───────────────────────────────────────────────── */}
-      <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-          <h2 className="font-bold flex items-center gap-2">
-            <span className="w-1.5 h-4 bg-purple-500 rounded-full inline-block" />
+      {/* ── Participants (individual sport) ───────────────────────────────── */}
+      {!isTeamSport && (
+        <section className="sp-card" style={{ overflow: "hidden" }}>
+          <div className="sp-card-header">
+            <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 18, background: "var(--accent)", borderRadius: 3, display: "inline-block" }} />
+              Participants
+              <span style={{ fontWeight: 400, fontSize: "0.8125rem", color: "var(--text-muted)" }}>({event.players.length})</span>
+            </h2>
+          </div>
+          {event.players.length === 0 ? (
+            <div style={{ padding: "48px 24px", textAlign: "center" }}>
+              <p style={{ fontSize: "2rem", marginBottom: 10 }}>👥</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                {canManage ? "No participants yet." : "Be the first to join!"}
+              </p>
+            </div>
+          ) : (
+            event.players.map((p) => (
+              <div key={p.id} className="sp-list-item" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="sp-avatar" style={{ width: 36, height: 36, background: "rgba(251,191,36,0.12)", color: "#fbbf24" }}>
+                  {p.first_name[0]}{p.last_name[0]}
+                </div>
+                <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                  {p.first_name} {p.last_name}
+                  {p.id === currentUserId && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "var(--text-muted)" }}>(you)</span>}
+                </p>
+              </div>
+            ))
+          )}
+        </section>
+      )}
+
+      {/* ── Attendees (team sport join) ───────────────────────────────────── */}
+      {isTeamSport && event.players.length > 0 && (
+        <section className="sp-card" style={{ overflow: "hidden" }}>
+          <div className="sp-card-header">
+            <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 18, background: "#fbbf24", borderRadius: 3, display: "inline-block" }} />
+              Attendees
+              <span style={{ fontWeight: 400, fontSize: "0.8125rem", color: "var(--text-muted)" }}>({event.players.length})</span>
+            </h2>
+          </div>
+          {event.players.map((p) => (
+            <div key={p.id} className="sp-list-item" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="sp-avatar" style={{ width: 34, height: 34, background: "rgba(251,191,36,0.1)", color: "#fbbf24", borderRadius: 9 }}>
+                {p.first_name[0]}{p.last_name[0]}
+              </div>
+              <p style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                {p.first_name} {p.last_name}
+                {p.id === currentUserId && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "var(--text-muted)" }}>(you)</span>}
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* ── Matches ───────────────────────────────────────────────────────── */}
+      <section className="sp-card" style={{ overflow: "hidden" }}>
+        <div className="sp-card-header">
+          <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 6, height: 18, background: "#c084fc", borderRadius: 3, display: "inline-block" }} />
             Matches
-            <span className="text-zinc-600 font-normal text-sm">({event.matches.length})</span>
+            <span style={{ fontWeight: 400, fontSize: "0.8125rem", color: "var(--text-muted)" }}>({event.matches.length})</span>
           </h2>
           {canManage && !isEventDone && (
-            <button
-              onClick={() => setShowAddMatch((v) => !v)}
-              className="text-xs font-semibold text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition"
-            >
+            <button onClick={() => setShowAddMatch((v) => !v)} className="sp-btn-secondary" style={{ fontSize: "0.8125rem", padding: "7px 14px" }}>
               {showAddMatch ? "Cancel" : "+ Add Match"}
             </button>
           )}
         </div>
 
-        {/* Add match form */}
-        {showAddMatch && canManage && (
-          <div className="px-6 py-5 border-b border-white/[0.06]">
-            <AddMatchForm
-              eventId={event.id}
-              isTeamSport={isTeamSport}
-              participants={
-                isTeamSport
-                  ? event.participants.map((t) => ({ id: t.id, name: t.name }))
-                  : event.players.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }))
-              }
-              onAdded={() => { flash("ok", "Match added! Refresh to see it."); setShowAddMatch(false); }}
-            />
-          </div>
+        {showAddMatch && (
+          <AddMatchForm
+            eventId={event.id} teamsInSport={teamsInSport}
+            participants={event.participants} players={event.players}
+            isTeamSport={isTeamSport}
+            onAdded={() => { setShowAddMatch(false); flash("ok", "Match added. Reload to see it."); }}
+          />
         )}
 
         {event.matches.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-4xl mb-3">🏟</p>
-            <p className="text-zinc-500 text-sm">
-              {canManage
-                ? "No matches yet — click \"+ Add Match\" to create one."
-                : "No matches scheduled yet."}
+          <div style={{ padding: "48px 24px", textAlign: "center" }}>
+            <p style={{ fontSize: "2.5rem", marginBottom: 10 }}>🏟</p>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+              {canManage ? 'No matches yet — click "+ Add Match" to create one.' : "No matches scheduled yet."}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-white/[0.04]">
-            {event.matches.map((match) => {
-              const score = scores[match.id] ?? { a: match.score_team_a, b: match.score_team_b };
-              const status = matchStatuses[match.id] ?? match.status;
-              const isOngoing   = status === "ONGOING";
-              const isCompleted = status === "COMPLETED";
-              const isCancelled = status === "CANCELLED";
-              const isDone = isCompleted || isCancelled;
-              const canEditScore = canManage && !isCancelled;
+          event.matches.map((match) => {
+            const score    = scores[match.id] ?? { a: match.score_team_a, b: match.score_team_b };
+            const status   = matchStatuses[match.id] ?? match.status;
+            const isLive   = status === "ONGOING";
+            const isDone   = status === "COMPLETED" || status === "CANCELLED";
+            const nameA    = sideName(match.team_a, match.player_a);
+            const nameB    = sideName(match.team_b, match.player_b);
+            const initA    = sideInitials(match.team_a, match.player_a);
+            const initB    = sideInitials(match.team_b, match.player_b);
+            const winner   = status === "COMPLETED" ? (score.a > score.b ? nameA : score.b > score.a ? nameB : "Draw") : null;
 
-              // FIX: use helper so these work for both team and individual matches
-              const nameA = matchSideName(match.team_a, match.player_a);
-              const nameB = matchSideName(match.team_b, match.player_b);
-              const initialsA = matchSideInitials(match.team_a, match.player_a);
-              const initialsB = matchSideInitials(match.team_b, match.player_b);
+            return (
+              <div key={match.id} style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
+                {/* Match header row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className={`badge ${STATUS_BADGE[status]}`} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      {isLive && <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />}
+                      {status}
+                    </span>
+                    <span className="badge badge-zinc">{match.match_type}</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      {new Date(match.match_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                  {winner && (
+                    <span style={{ fontSize: "0.78rem", color: "var(--accent)", fontWeight: 700 }}>
+                      {winner === "Draw" ? "Draw" : `🏆 ${winner}`}
+                    </span>
+                  )}
+                </div>
 
-              // FIX: null-safe winner calculation
-              const winner = isCompleted
-                ? score.a > score.b ? nameA
-                : score.b > score.a ? nameB
-                : "Draw"
-                : null;
+                {/* Scoreboard */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                  {/* Side A */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div className="sp-avatar" style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0 }}>{initA}</div>
+                    <p style={{ fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.3 }}>{nameA}</p>
+                  </div>
+                  {/* Score */}
+                  <div style={{ textAlign: "center", minWidth: 80 }}>
+                    <p style={{ fontSize: "2rem", fontWeight: 900, lineHeight: 1, color: "var(--text-primary)" }}>
+                      {score.a} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>–</span> {score.b}
+                    </p>
+                  </div>
+                  {/* Side B */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.3, textAlign: "right" }}>{nameB}</p>
+                    <div className="sp-avatar" style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0 }}>{initB}</div>
+                  </div>
+                </div>
 
-              return (
-                <div key={match.id} className="p-6">
-                  {/* Match header */}
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isOngoing ? (
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#00ff87] bg-[#00ff87]/10 px-3 py-1.5 rounded-full border border-[#00ff87]/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-pulse" />
-                          LIVE
-                        </span>
-                      ) : (
-                        <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${
-                          isCompleted ? "text-zinc-400 bg-zinc-800 border-zinc-700" :
-                          isCancelled ? "text-red-400 bg-red-500/10 border-red-500/20" :
-                          "text-blue-400 bg-blue-500/10 border-blue-500/20"
-                        }`}>
-                          {status}
-                        </span>
-                      )}
-                      <span className="text-xs text-zinc-600 font-medium">{match.match_type}</span>
-                      {match.match_date && (
-                        <span className="text-xs text-zinc-600">
-                          {new Date(match.match_date).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}
-                        </span>
-                      )}
-                    </div>
-
-                    {canEditScore && (
-                      <button
-                        onClick={() => setEditingMatch(match)}
-                        className="text-xs font-semibold text-zinc-500 hover:text-[#00ff87] px-2.5 py-1.5 rounded-lg hover:bg-[#00ff87]/10 border border-transparent hover:border-[#00ff87]/20 transition"
-                      >
-                        ✏ Edit Score
-                      </button>
+                {/* Actions */}
+                {canManage && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {status === "SCHEDULED" && (
+                      <button disabled={pending} onClick={() => act(() => startMatch(match.id, event.id), () => setMatchStatuses((p) => ({ ...p, [match.id]: "ONGOING" })))}
+                        className="sp-btn-primary" style={{ fontSize: "0.78rem", padding: "6px 14px" }}>▶ Start</button>
+                    )}
+                    {isLive && (
+                      <>
+                        <button disabled={pending} onClick={() => act(() => scoreGoal(match.id, event.id, "a"), () => { setScores((p) => ({ ...p, [match.id]: { ...p[match.id], a: p[match.id].a + 1 } })); setLastScored((p) => ({ ...p, [match.id]: "a" })); })}
+                          className="sp-btn-secondary" style={{ fontSize: "0.78rem", padding: "6px 14px" }}>+1 {nameA}</button>
+                        <button disabled={pending} onClick={() => act(() => scoreGoal(match.id, event.id, "b"), () => { setScores((p) => ({ ...p, [match.id]: { ...p[match.id], b: p[match.id].b + 1 } })); setLastScored((p) => ({ ...p, [match.id]: "b" })); })}
+                          className="sp-btn-secondary" style={{ fontSize: "0.78rem", padding: "6px 14px" }}>+1 {nameB}</button>
+                        <button disabled={pending || !lastScored[match.id]} onClick={() => { const t = lastScored[match.id]; if (!t) return; act(() => undoScore(match.id, event.id, t), () => { setScores((p) => ({ ...p, [match.id]: { ...p[match.id], [t]: Math.max(0, p[match.id][t] - 1) } })); setLastScored((p) => { const n = { ...p }; delete n[match.id]; return n; }); flash("ok", "Last goal undone."); }); }}
+                          className="sp-btn-ghost" style={{ fontSize: "0.78rem", padding: "6px 12px" }}>Undo</button>
+                        <button disabled={pending} onClick={() => act(() => completeMatch(match.id, event.id), () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" })))}
+                          className="sp-btn-primary" style={{ fontSize: "0.78rem", padding: "6px 14px" }}>✓ Complete</button>
+                      </>
+                    )}
+                    {!isDone && (
+                      <button onClick={() => setEditingMatch(match)} className="sp-btn-secondary" style={{ fontSize: "0.78rem", padding: "6px 14px" }}>Edit Score</button>
+                    )}
+                    {!isDone && (
+                      <button disabled={pending} onClick={() => act(() => cancelMatch(match.id, event.id), () => setMatchStatuses((p) => ({ ...p, [match.id]: "CANCELLED" })))}
+                        className="sp-btn-danger" style={{ fontSize: "0.78rem", padding: "6px 12px" }}>✕ Cancel</button>
                     )}
                   </div>
-
-                  {/* Scoreboard */}
-                  <div className="grid grid-cols-3 gap-4 items-center mb-5">
-                    {/* Side A */}
-                    <div className="text-center">
-                      <div className="w-12 h-12 rounded-2xl bg-[#00ff87]/10 flex items-center justify-center font-black text-sm text-[#00ff87] mx-auto mb-2">
-                        {initialsA}
-                      </div>
-                      <p className="font-bold text-sm truncate mb-3">{nameA}</p>
-
-                      {isOngoing && canManage ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            disabled={pending || score.a <= 0}
-                            onClick={() => act(
-                              () => undoScore(match.id, event.id, "a"),
-                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, a: cur.a - 1 } }; })
-                            )}
-                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
-                          >−</button>
-                          <span className="text-4xl font-black tabular-nums w-12 text-center">{score.a}</span>
-                          <button
-                            disabled={pending}
-                            onClick={() => act(
-                              () => scoreGoal(match.id, event.id, "a"),
-                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, a: cur.a + 1 } }; })
-                            )}
-                            className="w-9 h-9 rounded-xl bg-[#00ff87]/20 hover:bg-[#00ff87]/40 text-[#00ff87] font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
-                          >+</button>
-                        </div>
-                      ) : (
-                        <p className={`text-5xl font-black tabular-nums ${
-                          isCompleted && score.a > score.b ? "text-[#00ff87]" :
-                          isCompleted && score.a < score.b ? "text-zinc-500" : ""
-                        }`}>{score.a}</p>
-                      )}
-                    </div>
-
-                    {/* Center */}
-                    <div className="text-center">
-                      <p className="text-zinc-700 font-black text-2xl">
-                        {isOngoing ? "VS" : "—"}
-                      </p>
-                      {winner && (
-                        <p className="text-xs text-zinc-500 mt-2">
-                          {winner === "Draw" ? "Draw" : `${winner} wins`}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Side B */}
-                    <div className="text-center">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-sm text-blue-400 mx-auto mb-2">
-                        {initialsB}
-                      </div>
-                      <p className="font-bold text-sm truncate mb-3">{nameB}</p>
-
-                      {isOngoing && canManage ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            disabled={pending || score.b <= 0}
-                            onClick={() => act(
-                              () => undoScore(match.id, event.id, "b"),
-                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, b: cur.b - 1 } }; })
-                            )}
-                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
-                          >−</button>
-                          <span className="text-4xl font-black tabular-nums w-12 text-center">{score.b}</span>
-                          <button
-                            disabled={pending}
-                            onClick={() => act(
-                              () => scoreGoal(match.id, event.id, "b"),
-                              () => setScores((p) => { const cur = p[match.id] ?? { a: match.score_team_a, b: match.score_team_b }; return { ...p, [match.id]: { ...cur, b: cur.b + 1 } }; })
-                            )}
-                            className="w-9 h-9 rounded-xl bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 font-bold text-xl transition disabled:opacity-30 flex items-center justify-center"
-                          >+</button>
-                        </div>
-                      ) : (
-                        <p className={`text-5xl font-black tabular-nums ${
-                          isCompleted && score.b > score.a ? "text-[#00ff87]" :
-                          isCompleted && score.b < score.a ? "text-zinc-500" : ""
-                        }`}>{score.b}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Match lifecycle buttons */}
-                  
-{canManage && !isDone && (
-  <div className="flex items-center gap-2 justify-end flex-wrap pt-2 border-t border-white/[0.04]">
-    {status === "SCHEDULED" && (
-      <button
-        disabled={pending}
-        onClick={() => act(
-          () => startMatch(match.id, event.id),
-          () => {
-            setMatchStatuses((p) => ({ ...p, [match.id]: "ONGOING" }));
-            if (eventStatus === "SCHEDULED") setEventStatus("ONGOING");
-          }
-        )}
-        className="text-xs font-semibold bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/30 px-4 py-1.5 rounded-lg hover:bg-[#00ff87]/30 transition disabled:opacity-40"
-      >
-        ▶ Start Match
-      </button>
-    )}
-    {isOngoing && (
-      <>
-        <button
-          disabled={pending}
-          onClick={() => act(
-            () => completeMatch(match.id, event.id, "NORMAL"),
-            () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" }))
-          )}
-          className="text-xs font-semibold bg-zinc-700 text-zinc-200 border border-zinc-600 px-4 py-1.5 rounded-lg hover:bg-zinc-600 transition disabled:opacity-40"
-        >
-          ✓ Complete
-        </button>
-        <button
-          disabled={pending}
-          onClick={() => act(
-            () => completeMatch(match.id, event.id, "OVERTIME"),
-            () => setMatchStatuses((p) => ({ ...p, [match.id]: "COMPLETED" }))
-          )}
-          className="text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-lg hover:bg-blue-500/20 transition disabled:opacity-40"
-          title="Winner gets 2 pts, loser gets 1 pt"
-        >
-          ⏱ OT / Tiebreaker
-        </button>
-      </>
-    )}
-    <button
-      disabled={pending}
-      onClick={() => act(
-        () => cancelMatch(match.id, event.id),
-        () => setMatchStatuses((p) => ({ ...p, [match.id]: "CANCELLED" }))
-      )}
-      className="text-xs font-semibold text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40"
-    >
-      ✕ Cancel
-    </button>
-  </div>
-)}
- 
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            );
+          })
         )}
       </section>
-
-      {/* ── Attendees (only shown for team sports) ────────────────── */}
-      {isTeamSport && (
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06]">
-            <h2 className="font-bold flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-amber-400 rounded-full inline-block" />
-              Attendees
-              <span className="text-zinc-600 font-normal text-sm">({event.players.length})</span>
-            </h2>
-          </div>
-          {event.players.length === 0 ? (
-            <div className="px-6 py-8 text-center">
-              <p className="text-zinc-600 text-sm">No players have joined yet.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {event.players.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 px-6 py-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center font-black text-xs text-amber-400 shrink-0">
-                    {p.first_name[0]}{p.last_name[0]}
-                  </div>
-                  <span className="text-sm font-medium">
-                    {p.first_name} {p.last_name}
-                    {p.id === currentUserId && <span className="ml-2 text-xs text-zinc-500">(you)</span>}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
     </div>
   );
 }

@@ -10,214 +10,190 @@ interface Props {
 
 export default async function TeamDetailPage({ params }: Props) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
 
   const { id } = await params;
   const data = await getTeamDetail(id);
   if (!data) redirect("/dashboard/teams");
 
-  const { team, allMatches, stats, isMember, isCaptain, isAdmin } = data;
+  const { team, allMatches, stats, isMember, isCaptain, isAdmin, currentUserId } = data;
   const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
 
-  const resultConfig = {
-    W: { label: "W", class: "bg-[#00ff87]/10 text-[#00ff87] border-[#00ff87]/20" },
-    L: { label: "L", class: "bg-red-500/10 text-red-400 border-red-500/20" },
-    D: { label: "D", class: "bg-zinc-800 text-zinc-400 border-zinc-700" },
+  const resultCfg = {
+    W: { bg: "rgba(0,255,135,0.1)",   color: "#00ff87", border: "rgba(0,255,135,0.2)" },
+    L: { bg: "rgba(248,113,113,0.1)", color: "#f87171", border: "rgba(248,113,113,0.2)" },
+    D: { bg: "rgba(255,255,255,0.05)", color: "#a1a1aa", border: "rgba(255,255,255,0.1)" },
   } as const;
 
   return (
-    <div className="min-h-screen bg-[#080810] text-white">
-      {/* Nav — logo links home */}
-      <nav className="sticky top-0 z-10 backdrop-blur-md bg-[#080810]/90 border-b border-white/5 px-6 h-16 flex items-center gap-4">
-        <Link href="/dashboard" className="text-xl font-black tracking-tighter mr-2">
-          SPORTS<span className="text-[#00ff87]">PORTAL</span>
-        </Link>
-        <span className="text-white/10">/</span>
-        <Link href="/dashboard/teams" className="text-zinc-500 hover:text-white transition text-sm">Teams</Link>
-        <span className="text-white/10">/</span>
-        <span className="text-sm text-zinc-300 font-medium truncate">{team.name}</span>
-        {isCaptain && (
-          <span className="ml-auto text-xs font-bold text-[#00ff87] bg-[#00ff87]/10 px-3 py-1.5 rounded-lg border border-[#00ff87]/20">
-            Captain
-          </span>
-        )}
-        {isMember && !isCaptain && (
-          <span className="ml-auto text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
-            Member
-          </span>
-        )}
-      </nav>
+    <div style={{ padding: "32px 32px 48px", maxWidth: 1000, width: "100%" }}>
 
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
-        <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-[#00ff87]/10 flex items-center justify-center font-black text-xl text-[#00ff87] shrink-0">
-            {team.name.slice(0, 2).toUpperCase()}
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28, fontSize: "0.8125rem" }}>
+        <Link href="/dashboard/teams" style={{ color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Teams</Link>
+        <span style={{ color: "var(--text-muted)" }}>›</span>
+        <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{team.name}</span>
+      </div>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32 }}>
+        <div className="sp-avatar" style={{ width: 64, height: 64, fontSize: "1.375rem", borderRadius: 16 }}>
+          {team.name.slice(0, 2).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+            <h1 className="sp-page-title" style={{ fontSize: "1.625rem" }}>{team.name}</h1>
+            {isCaptain && <span className="badge badge-green">Captain</span>}
+            {isMember && !isCaptain && <span className="badge badge-blue">Member</span>}
+            {!team.is_active && <span className="badge badge-red">Inactive</span>}
           </div>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">{team.name}</h1>
-            <p className="text-zinc-500 mt-1">{team.sport.name} · {team.members.length} members</p>
-            <p className="text-zinc-600 text-xs mt-1">
-              Captain: {team.captain.user.name ?? team.captain.user.email}
-            </p>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+            {team.sport.name} · {team.members.length} member{team.members.length !== 1 ? "s" : ""} · Captain: {team.captain.user.name ?? team.captain.user.email}
+          </p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 28 }}>
+        {[
+          { label: "Played",   value: stats.played,  color: "var(--text-primary)" },
+          { label: "Wins",     value: stats.wins,    color: "var(--accent)" },
+          { label: "Losses",   value: stats.losses,  color: "#f87171" },
+          { label: "Draws",    value: stats.draws,   color: "var(--text-secondary)" },
+          { label: "Win Rate", value: `${winRate}%`, color: winRate >= 50 ? "var(--accent)" : "#f87171" },
+        ].map((s) => (
+          <div key={s.label} className="sp-stat-card" style={{ textAlign: "center", padding: "16px 10px" }}>
+            <p style={{ fontSize: "1.75rem", fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: 6, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Goals row */}
+      {stats.played > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 28 }}>
+          <div className="sp-card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(0,255,135,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", flexShrink: 0 }}>⚽</div>
+            <div>
+              <p style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--accent)", lineHeight: 1 }}>{stats.totalGoalsFor}</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>Goals For</p>
+            </div>
+          </div>
+          <div className="sp-card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(248,113,113,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", flexShrink: 0 }}>🥅</div>
+            <div>
+              <p style={{ fontSize: "1.75rem", fontWeight: 900, color: "#f87171", lineHeight: 1 }}>{stats.totalGoalsAgainst}</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>Goals Against</p>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {[
-            { label: "Played",   value: stats.played,  color: "text-white" },
-            { label: "Wins",     value: stats.wins,    color: "text-[#00ff87]" },
-            { label: "Losses",   value: stats.losses,  color: "text-red-400" },
-            { label: "Draws",    value: stats.draws,   color: "text-zinc-400" },
-            { label: "Win Rate", value: `${winRate}%`, color: winRate >= 50 ? "text-[#00ff87]" : "text-red-400" },
-          ].map((s) => (
-            <div key={s.label} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 text-center">
-              <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-              <p className="text-zinc-600 text-xs mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
+      {/* Main grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
 
-        {stats.played > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#00ff87]/10 flex items-center justify-center text-[#00ff87] text-lg shrink-0">⚽</div>
-              <div>
-                <p className="text-2xl font-black text-[#00ff87]">{stats.totalGoalsFor}</p>
-                <p className="text-zinc-500 text-xs">Goals For</p>
-              </div>
-            </div>
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 text-lg shrink-0">🥅</div>
-              <div>
-                <p className="text-2xl font-black text-red-400">{stats.totalGoalsAgainst}</p>
-                <p className="text-zinc-500 text-xs">Goals Against</p>
-              </div>
-            </div>
+        {/* Roster */}
+        <section className="sp-card" style={{ overflow: "hidden" }}>
+          <div className="sp-card-header">
+            <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 18, background: "#60a5fa", borderRadius: 3, display: "inline-block" }} />
+              Roster
+              <span style={{ fontWeight: 400, fontSize: "0.8125rem", color: "var(--text-muted)" }}>({team.members.length})</span>
+            </h2>
           </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Roster + transfer captaincy */}
-          <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/[0.06]">
-              <h2 className="font-bold flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-blue-400 rounded-full inline-block" />
-                Roster
-                <span className="text-zinc-600 font-normal text-sm">({team.members.length})</span>
-              </h2>
-            </div>
-            <div className="divide-y divide-white/[0.04]">
-              {team.members.map((member) => {
-                const isCap = member.id === team.captain_id;
-                return (
-                  <div key={member.id} className="flex items-center gap-4 px-6 py-3.5">
-                    <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-xs text-zinc-400 shrink-0">
-                      {(member.user.name ?? member.user.email).slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{member.user.name ?? member.user.email}</p>
-                      {isCap && <p className="text-xs text-[#00ff87]">Captain</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Transfer captaincy — only shown to current captain or admin */}
-            {(isCaptain || isAdmin) && team.members.length > 1 && (
-              <div className="px-6 py-4 border-t border-white/[0.06]">
-                <TeamDetailClient
-                  teamId={team.id}
-                  members={team.members
-                    .filter((m) => m.id !== team.captain_id)
-                    .map((m) => ({ id: m.id, name: m.user.name ?? m.user.email }))}
-                />
+          {team.members.map((member) => {
+            const isCap = member.id === team.captain_id;
+            return (
+              <div key={member.id} className="sp-list-item" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="sp-avatar" style={{ width: 36, height: 36 }}>
+                  {(member.user.name ?? member.user.email).slice(0, 2).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {member.user.name ?? member.user.email}
+                    {member.id === currentUserId && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--text-muted)" }}>(you)</span>}
+                  </p>
+                  {isCap && <p style={{ fontSize: "0.72rem", color: "var(--accent)", marginTop: 2, fontWeight: 600 }}>Captain</p>}
+                </div>
               </div>
-            )}
-          </section>
+            );
+          })}
 
-          {/* Events */}
-          <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/[0.06]">
-              <h2 className="font-bold flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-purple-500 rounded-full inline-block" />
+          {/* Captain + member actions */}
+          {(isCaptain || isMember) && (
+            <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
+              <TeamDetailClient
+                teamId={team.id}
+                isCaptain={isCaptain}
+                isMember={isMember}
+                members={team.members
+                  .filter((m) => m.id !== team.captain_id)
+                  .map((m) => ({ id: m.id, name: m.user.name ?? m.user.email }))}
+              />
+            </div>
+          )}
+        </section>
+
+        {/* Events */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <section className="sp-card" style={{ overflow: "hidden" }}>
+            <div className="sp-card-header">
+              <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 6, height: 18, background: "#c084fc", borderRadius: 3, display: "inline-block" }} />
                 Events
               </h2>
             </div>
             {team.events.length === 0 ? (
-              <div className="px-6 py-8 text-center"><p className="text-zinc-600 text-sm">No events yet.</p></div>
-            ) : (
-              <div className="divide-y divide-white/[0.04]">
-                {team.events.map((e) => (
-                  <Link key={e.id} href={`/dashboard/events/${e.id}`}
-                    className="flex items-center gap-3 px-6 py-3 hover:bg-white/[0.03] transition group">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm group-hover:text-[#00ff87] transition truncate">{e.name}</p>
-                      <p className="text-zinc-600 text-xs">{e.sport.name} · {new Date(e.start_time).toLocaleDateString()}</p>
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-lg border ${
-                      e.status === "ONGOING"   ? "text-[#00ff87] bg-[#00ff87]/10 border-[#00ff87]/20" :
-                      e.status === "COMPLETED" ? "text-zinc-400 bg-zinc-800 border-zinc-700" :
-                      "text-blue-400 bg-blue-500/10 border-blue-500/20"
-                    }`}>
-                      {e.status.charAt(0) + e.status.slice(1).toLowerCase()}
-                    </span>
-                  </Link>
-                ))}
+              <div style={{ padding: "32px 24px", textAlign: "center" }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>No events yet.</p>
               </div>
-            )}
-          </section>
-        </div>
-
-        {/* Match History */}
-        <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06]">
-            <h2 className="font-bold flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-[#00ff87] rounded-full inline-block" />
-              Match History
-              <span className="text-zinc-600 font-normal text-sm">({allMatches.length})</span>
-            </h2>
-          </div>
-          {allMatches.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-4xl mb-3">📊</p>
-              <p className="text-zinc-500 text-sm">No completed matches yet.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {allMatches.map((m) => {
-                const rc = resultConfig[m.result as keyof typeof resultConfig];
-                return (
-                  <div key={m.id} className="flex items-center gap-5 px-6 py-4">
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black border shrink-0 ${rc.class}`}>
-                      {rc.label}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">vs {m.opponent?.name}</p>
-                      {m.event && (
-                        <Link href={`/dashboard/events/${m.event.id}`} className="text-xs text-zinc-600 hover:text-zinc-400 transition">
-                          {m.event.name}
-                        </Link>
-                      )}
+            ) : team.events.map((e) => {
+              const statusColor = e.status === "ONGOING" ? "var(--accent)" : e.status === "COMPLETED" ? "var(--text-muted)" : e.status === "CANCELLED" ? "#f87171" : "#60a5fa";
+              return (
+                <Link key={e.id} href={`/dashboard/events/${e.id}`} style={{ textDecoration: "none" }}>
+                  <div className="sp-list-item sp-list-item--hover" style={{ borderTop: "1px solid var(--border)" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>{e.sport.name} · {new Date(e.start_time).toLocaleDateString()}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-black text-lg tabular-nums">
-                        <span className={m.result === "W" ? "text-[#00ff87]" : m.result === "L" ? "text-red-400" : "text-zinc-400"}>
-                          {m.scoreFor}
-                        </span>
-                        <span className="text-zinc-700 mx-1">–</span>
-                        <span className="text-zinc-400">{m.scoreAgainst}</span>
-                      </p>
-                    </div>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColor }}>{e.status}</span>
                   </div>
+                </Link>
+              );
+            })}
+          </section>
+
+          {/* Recent matches */}
+          {allMatches.length > 0 && (
+            <section className="sp-card" style={{ overflow: "hidden" }}>
+              <div className="sp-card-header">
+                <h2 style={{ fontWeight: 700, fontSize: "0.9375rem", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 6, height: 18, background: "#fbbf24", borderRadius: 3, display: "inline-block" }} />
+                  Recent Matches
+                </h2>
+              </div>
+              {allMatches.slice(0, 8).map((m) => {
+                const rc = resultCfg[m.result as keyof typeof resultCfg];
+                return (
+                  <Link key={m.id} href={m.event ? `/dashboard/events/${m.event.id}` : "#"} style={{ textDecoration: "none" }}>
+                    <div className="sp-list-item" style={{ borderTop: "1px solid var(--border)" }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: rc.bg, border: `1px solid ${rc.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 900, color: rc.color, flexShrink: 0 }}>
+                        {m.result}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: "0.8125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          vs {m.opponent?.name ?? "Unknown"}
+                        </p>
+                        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>{new Date(m.date).toLocaleDateString()}</p>
+                      </div>
+                      <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-primary)" }}>{m.scoreFor}–{m.scoreAgainst}</span>
+                    </div>
+                  </Link>
                 );
               })}
-            </div>
+            </section>
           )}
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
   );
 }
