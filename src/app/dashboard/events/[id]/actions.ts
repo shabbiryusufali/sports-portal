@@ -68,7 +68,9 @@ export async function getEventData(id: string) {
     select: { id: true },
   });
   const hasPlayerProfile = !!playerProfile;
-  const isJoined = event.players.some((p) => p.id === session.user.id);
+  const isJoined = session?.user?.id
+    ? event.players.some((p) => p.id === session?.user?.id)
+    : false;
 
   return {
     event,
@@ -390,7 +392,10 @@ export async function joinEvent(
       throw new Error("This event is no longer open for registration.");
     if (event.registration_deadline && new Date() > event.registration_deadline)
       throw new Error("The registration deadline has passed.");
-    if (event.players.some((p) => p.id === session.user.id))
+    if (
+      session?.user?.id &&
+      event.players.some((p) => p.id === session?.user?.id)
+    )
       throw new Error("You have already joined this event.");
 
     await prisma.event.update({

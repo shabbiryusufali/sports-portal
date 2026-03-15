@@ -26,7 +26,7 @@ export default async function DashboardPage() {
 
   const teams = user?.player?.teams ?? [];
   const hasPlayerProfile = !!user?.player;
-  const displayName = session.user?.name ?? session.user?.email ?? "Athlete";
+  const displayName = session?.user?.name ?? session?.user?.email ?? "Athlete";
 
   return (
     <div style={{ padding: "32px 32px 40px", maxWidth: 1200, width: "100%" }}>
