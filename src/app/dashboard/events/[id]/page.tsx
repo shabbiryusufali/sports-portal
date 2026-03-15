@@ -18,6 +18,7 @@ export default async function EventPage({ params }: Props) {
   const {
     event,
     canManage,
+    isOrganizer,
     teamsInSport,
     currentUserId,
     hasPlayerProfile,
@@ -256,6 +257,7 @@ export default async function EventPage({ params }: Props) {
         isJoined={isJoined}
         currentUserId={currentUserId}
         isTeamSport={isTeamSport}
+        isOrganizer={isOrganizer}
       />
     </div>
   );

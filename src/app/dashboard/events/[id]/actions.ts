@@ -63,6 +63,8 @@ export async function getEventData(id: string) {
   const canManage =
     event.organizer_id === session.user.id || (user?.is_admin ?? false);
 
+  const isOrganizer = event.organizer_id === session.user.id;
+
   const playerProfile = await prisma.player.findUnique({
     where: { id: session.user.id },
     select: { id: true },
@@ -75,6 +77,7 @@ export async function getEventData(id: string) {
   return {
     event,
     canManage,
+    isOrganizer, // ← add
     teamsInSport,
     playersInSport,
     currentUserId: session.user.id,

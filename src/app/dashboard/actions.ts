@@ -44,10 +44,11 @@ export async function createEvent(
 
   const sport_id = (form.get("sport_id") as string)?.trim();
   const rawType = String(
-    form.get("type") ?? "PRACTICE",
+    form.get("event_type") ?? "PRACTICE",
   ).toUpperCase() as EventType;
-  const start = new Date(String(form.get("start")));
-  const end = new Date(String(form.get("end")));
+
+  const start = new Date(String(form.get("start_time")));
+  const end = new Date(String(form.get("end_time")));
   const notes = (form.get("notes") as string) || null;
   const baseName = (form.get("name") as string)?.trim() || `${rawType} session`;
   const location = (form.get("location") as string) || null;

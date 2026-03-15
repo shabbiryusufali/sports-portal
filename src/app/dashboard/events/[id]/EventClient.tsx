@@ -53,6 +53,7 @@ interface Props {
   isJoined: boolean;
   currentUserId: string;
   isTeamSport: boolean;
+  isOrganizer: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -340,6 +341,7 @@ function AddMatchForm({
 export default function EventClient({
   event,
   canManage,
+  isOrganizer,
   teamsInSport,
   hasPlayerProfile,
   isJoined: initialJoined,
@@ -421,7 +423,7 @@ export default function EventClient({
       )}
 
       {/* ── Join / Leave (non-managers only) ─────────────────────────────── */}
-      {!canManage && (
+      {!isOrganizer && (
         <div
           className="sp-card"
           style={{

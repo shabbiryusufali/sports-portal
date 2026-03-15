@@ -14,9 +14,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     const result = await requestPasswordReset(email.trim().toLowerCase());
-
     if (!result.success) {
       setError(result.message ?? "Something went wrong.");
     } else {
@@ -26,37 +24,95 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="sp-auth-page">
+      <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
-        <div className="text-center mb-10">
-          <span className="inline-block text-4xl font-black tracking-tighter text-white">
-            SPORTS<span className="text-[#00ff87]">PORTAL</span>
-          </span>
-          <p className="mt-2 text-zinc-400 text-sm">
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-block",
+              fontSize: "2rem",
+              fontWeight: 900,
+              letterSpacing: "-0.05em",
+              textDecoration: "none",
+              color: "var(--text-primary)",
+            }}
+          >
+            SPORTS<span style={{ color: "var(--accent)" }}>PORTAL</span>
+          </Link>
+          <p
+            style={{
+              marginTop: 8,
+              color: "var(--text-secondary)",
+              fontSize: "0.875rem",
+            }}
+          >
             Manage your teams, events, and matches.
           </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        {/* Card */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 20,
+            padding: "32px",
+          }}
+        >
           {submitted ? (
             /* ── Success state ── */
-            <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#00ff87]/10 border border-[#00ff87]/20 flex items-center justify-center text-2xl mx-auto mb-5">
+            <div style={{ textAlign: "center", padding: "16px 0" }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: "var(--accent-dim)",
+                  border: "1px solid rgba(0,255,135,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.5rem",
+                  margin: "0 auto 20px",
+                }}
+              >
                 📧
               </div>
-              <h2 className="text-lg font-bold text-white mb-2">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  marginBottom: 10,
+                }}
+              >
                 Check your inbox
               </h2>
-              <p className="text-zinc-400 text-sm leading-relaxed">
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.6,
+                }}
+              >
                 If an account exists for{" "}
-                <span className="text-white font-medium">{email}</span>, you
-                will receive a password reset link shortly. The link expires in
-                1 hour.
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+                  {email}
+                </span>
+                , you will receive a reset link shortly. It expires in 1 hour.
               </p>
               <Link
                 href="/auth/login"
-                className="mt-6 inline-block text-sm text-[#00ff87] hover:underline"
+                style={{
+                  display: "inline-block",
+                  marginTop: 24,
+                  fontSize: "0.875rem",
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
               >
                 ← Back to sign in
               </Link>
@@ -64,26 +120,42 @@ export default function ForgotPasswordPage() {
           ) : (
             /* ── Request form ── */
             <>
-              <h1 className="text-xl font-bold text-white mb-2">
+              <h1
+                style={{
+                  fontSize: "1.25rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  marginBottom: 8,
+                }}
+              >
                 Forgot password?
               </h1>
-              <p className="text-zinc-400 text-sm mb-6">
-                Enter the email address linked to your account and we&#39;ll send
-                you a reset link.
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.875rem",
+                  marginBottom: 24,
+                }}
+              >
+                Enter the email address linked to your account and we&apos;ll
+                send you a reset link.
               </p>
 
               {error && (
-                <div className="mb-5 bg-red-900/30 border border-red-700 text-red-400 text-sm px-4 py-3 rounded-lg">
+                <div
+                  className="sp-notice sp-notice-err"
+                  style={{ marginBottom: 20 }}
+                >
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form
+                onSubmit={handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-xs font-medium text-zinc-400 mb-1.5"
-                  >
+                  <label className="sp-label" htmlFor="email">
                     Email
                   </label>
                   <input
@@ -93,25 +165,41 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#00ff87] transition"
                     placeholder="you@example.com"
+                    className="sp-input"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="sp-btn-primary"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    padding: "12px",
+                  }}
                 >
                   {loading ? "Sending…" : "Send Reset Link"}
                 </button>
               </form>
 
-              <p className="text-center text-zinc-500 text-sm mt-6">
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: "0.875rem",
+                  color: "var(--text-secondary)",
+                  marginTop: 24,
+                }}
+              >
                 Remembered it?{" "}
                 <Link
                   href="/auth/login"
-                  className="text-[#00ff87] hover:underline font-medium"
+                  style={{
+                    color: "var(--accent)",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
                 >
                   Sign in
                 </Link>

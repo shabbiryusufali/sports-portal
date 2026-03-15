@@ -46,6 +46,7 @@ model Event {
   is_public             Boolean   @default(false)
   registration_deadline DateTime?
   matches               Match[]
+  tournaments           Tournament[]   // ← add this line
 }
 
 model Sport {
@@ -214,4 +215,137 @@ model PasswordResetToken {
   token     String   @unique
   expires   DateTime
   createdAt DateTime @default(now())
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+ 
+enum StageType {
+  GROUP
+  KNOCKOUT
+}
+ 
+enum StageStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+ 
+enum TournamentMatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+ 
+enum TournamentResultType {
+  NORMAL         // clean win/loss  → winner 3pts, loser 0pts
+  TIEBREAK       // decider game   → winner 2pts, loser 1pt
+  FORFEIT        // one forfeited  → winner 3pts, forfeiter 0pts
+  DOUBLE_FORFEIT // skipped        → both 0pts
+}
+ 
+model Tournament {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  status      TournamentStatus   @default(DRAFT)
+  event_id    String?
+  event       Event?             @relation(fields: [event_id], references: [id])
+  created_at  DateTime           @default(now())
+  updated_at  DateTime           @updatedAt
+  stages      TournamentStage[]
+  participants TournamentParticipant[]
+}
+ 
+model TournamentStage {
+  id           String           @id @default(cuid())
+  tournament_id String
+  tournament   Tournament       @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  name         String
+  type         StageType
+  order        Int
+  status       StageStatus      @default(PENDING)
+  best_of      Int              @default(1)
+  created_at   DateTime         @default(now())
+  groups       TournamentGroup[]
+  matches      TournamentMatch[]
+  @@unique([tournament_id, order])
+}
+ 
+model TournamentGroup {
+  id       String           @id @default(cuid())
+  stage_id String
+  stage    TournamentStage  @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+  name     String
+  order    Int              @default(0)
+  participants GroupParticipant[]
+  matches  TournamentMatch[]
+  @@unique([stage_id, name])
+}
+ 
+model TournamentParticipant {
+  id            String     @id @default(cuid())
+  tournament_id String
+  tournament    Tournament @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  name          String
+  seed          Int?
+  created_at    DateTime   @default(now())
+  group_entries GroupParticipant[]
+  matches_as_p1 TournamentMatch[] @relation("TournamentMatchP1")
+  matches_as_p2 TournamentMatch[] @relation("TournamentMatchP2")
+  @@unique([tournament_id, name])
+}
+ 
+model GroupParticipant {
+  id             String                @id @default(cuid())
+  group_id       String
+  group          TournamentGroup       @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  participant_id String
+  participant    TournamentParticipant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+  played         Int @default(0)
+  wins           Int @default(0)
+  tiebreak_wins  Int @default(0)
+  tiebreak_loss  Int @default(0)
+  losses         Int @default(0)
+  forfeits       Int @default(0)
+  points         Int @default(0)
+  points_for     Int @default(0)
+  points_against Int @default(0)
+  final_rank     Int?
+  @@unique([group_id, participant_id])
+}
+ 
+model TournamentMatch {
+  id              String                 @id @default(cuid())
+  stage_id        String
+  stage           TournamentStage        @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+  group_id        String?
+  group           TournamentGroup?       @relation(fields: [group_id], references: [id])
+  participant1_id String?
+  participant1    TournamentParticipant? @relation("TournamentMatchP1", fields: [participant1_id], references: [id])
+  participant2_id String?
+  participant2    TournamentParticipant? @relation("TournamentMatchP2", fields: [participant2_id], references: [id])
+  round           Int?
+  match_number    Int?
+  label           String?
+  status          TournamentMatchStatus  @default(SCHEDULED)
+  result_type     TournamentResultType?
+  winner_id       String?
+  games           Json?                  // [{p1: 21, p2: 18}, ...]
+  points1         Int                    @default(0)
+  points2         Int                    @default(0)
+  notes           String?
+  next_match_id   String?
+  next_match      TournamentMatch?       @relation("Bracket", fields: [next_match_id], references: [id], onDelete: SetNull)
+  prev_matches    TournamentMatch[]      @relation("Bracket")
+  scheduled_at    DateTime?
+  created_at      DateTime               @default(now())
+  updated_at      DateTime               @updatedAt
 }

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { validateResetToken, resetPassword } from "./actions";
@@ -7,28 +8,25 @@ import { validateResetToken, resetPassword } from "./actions";
 type Stage = "loading" | "invalid" | "form" | "success";
 
 export default function ResetPasswordClient() {
-    const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") ?? "";
 
   const [stage, setStage] = useState<Stage>("loading");
   const [email, setEmail] = useState("");
-
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Validate token on mount
   useEffect(() => {
     if (!token) {
       setStage("invalid");
       return;
     }
     validateResetToken(token).then(({ valid, email: e }) => {
-      if (!valid) {
-        setStage("invalid");
-      } else {
+      if (!valid) setStage("invalid");
+      else {
         setEmail(e ?? "");
         setStage("form");
       }
@@ -39,7 +37,6 @@ export default function ResetPasswordClient() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     const result = await resetPassword(token, password, confirm);
     if (!result.success) {
       setError(result.message ?? "Something went wrong.");
@@ -49,45 +46,111 @@ export default function ResetPasswordClient() {
       setTimeout(() => router.push("/auth/login"), 2500);
     }
   };
-	return (
-	
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+
+  return (
+    <div className="sp-auth-page">
+      <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
-        <div className="text-center mb-10">
-          <span className="inline-block text-4xl font-black tracking-tighter text-white">
-            SPORTS<span className="text-[#00ff87]">PORTAL</span>
-          </span>
-          <p className="mt-2 text-zinc-400 text-sm">
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-block",
+              fontSize: "2rem",
+              fontWeight: 900,
+              letterSpacing: "-0.05em",
+              textDecoration: "none",
+              color: "var(--text-primary)",
+            }}
+          >
+            SPORTS<span style={{ color: "var(--accent)" }}>PORTAL</span>
+          </Link>
+          <p
+            style={{
+              marginTop: 8,
+              color: "var(--text-secondary)",
+              fontSize: "0.875rem",
+            }}
+          >
             Manage your teams, events, and matches.
           </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        <div
+          style={{
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 20,
+            padding: "32px",
+          }}
+        >
           {/* Loading */}
           {stage === "loading" && (
-            <div className="text-center py-6">
-              <div className="w-8 h-8 border-2 border-[#00ff87] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-zinc-400 text-sm">Validating your link…</p>
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: "2px solid var(--accent)",
+                  borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.7s linear infinite",
+                  margin: "0 auto 16px",
+                }}
+              />
+              <p
+                style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}
+              >
+                Validating your link…
+              </p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
 
           {/* Invalid / expired */}
           {stage === "invalid" && (
-            <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl mx-auto mb-5">
+            <div style={{ textAlign: "center", padding: "16px 0" }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: "rgba(248,113,113,0.1)",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.5rem",
+                  margin: "0 auto 20px",
+                }}
+              >
                 ⛔
               </div>
-              <h2 className="text-lg font-bold text-white mb-2">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  marginBottom: 10,
+                }}
+              >
                 Link invalid or expired
               </h2>
-              <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                This password reset link has already been used or has expired.
-                Reset links are valid for 1 hour.
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.6,
+                  marginBottom: 24,
+                }}
+              >
+                This password reset link has already been used or expired. Reset
+                links are valid for 1 hour.
               </p>
               <Link
                 href="/auth/forgot-password"
-                className="inline-block bg-[#00ff87] text-zinc-900 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-[#00e87a] transition"
+                className="sp-btn-primary"
+                style={{ width: "100%", justifyContent: "center" }}
               >
                 Request a new link
               </Link>
@@ -97,28 +160,49 @@ export default function ResetPasswordClient() {
           {/* Form */}
           {stage === "form" && (
             <>
-              <h1 className="text-xl font-bold text-white mb-2">
+              <h1
+                style={{
+                  fontSize: "1.25rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  marginBottom: 8,
+                }}
+              >
                 Create new password
               </h1>
               {email && (
-                <p className="text-zinc-400 text-sm mb-6">
+                <p
+                  style={{
+                    color: "var(--text-secondary)",
+                    fontSize: "0.875rem",
+                    marginBottom: 24,
+                  }}
+                >
                   Setting a new password for{" "}
-                  <span className="text-white font-medium">{email}</span>.
+                  <span
+                    style={{ color: "var(--text-primary)", fontWeight: 600 }}
+                  >
+                    {email}
+                  </span>
+                  .
                 </p>
               )}
 
               {error && (
-                <div className="mb-5 bg-red-900/30 border border-red-700 text-red-400 text-sm px-4 py-3 rounded-lg">
+                <div
+                  className="sp-notice sp-notice-err"
+                  style={{ marginBottom: 20 }}
+                >
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form
+                onSubmit={handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
                 <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-xs font-medium text-zinc-400 mb-1.5"
-                  >
+                  <label className="sp-label" htmlFor="password">
                     New Password
                   </label>
                   <input
@@ -129,16 +213,12 @@ export default function ResetPasswordClient() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#00ff87] transition"
                     placeholder="Min. 8 characters"
+                    className="sp-input"
                   />
                 </div>
-
                 <div>
-                  <label
-                    htmlFor="confirm"
-                    className="block text-xs font-medium text-zinc-400 mb-1.5"
-                  >
+                  <label className="sp-label" htmlFor="confirm">
                     Confirm Password
                   </label>
                   <input
@@ -149,20 +229,31 @@ export default function ResetPasswordClient() {
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     autoComplete="new-password"
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#00ff87] transition"
                     placeholder="Repeat password"
+                    className="sp-input"
                   />
                   {confirm && password !== confirm && (
-                    <p className="mt-1.5 text-xs text-red-400">
+                    <p
+                      style={{
+                        marginTop: 6,
+                        fontSize: "0.75rem",
+                        color: "#f87171",
+                      }}
+                    >
                       Passwords do not match.
                     </p>
                   )}
                 </div>
-
                 <button
                   type="submit"
                   disabled={loading || (!!confirm && password !== confirm)}
-                  className="w-full bg-[#00ff87] text-zinc-900 font-bold py-2.5 rounded-xl hover:bg-[#00e87a] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="sp-btn-primary"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    padding: "12px",
+                    marginTop: 4,
+                  }}
                 >
                   {loading ? "Updating…" : "Update Password"}
                 </button>
@@ -172,14 +263,36 @@ export default function ResetPasswordClient() {
 
           {/* Success */}
           {stage === "success" && (
-            <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#00ff87]/10 border border-[#00ff87]/20 flex items-center justify-center text-2xl mx-auto mb-5">
+            <div style={{ textAlign: "center", padding: "16px 0" }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 14,
+                  background: "var(--accent-dim)",
+                  border: "1px solid rgba(0,255,135,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.5rem",
+                  margin: "0 auto 20px",
+                }}
+              >
                 ✅
               </div>
-              <h2 className="text-lg font-bold text-white mb-2">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  marginBottom: 10,
+                }}
+              >
                 Password updated!
               </h2>
-              <p className="text-zinc-400 text-sm">
+              <p
+                style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}
+              >
                 Your password has been changed. Redirecting to sign in…
               </p>
             </div>
@@ -187,5 +300,5 @@ export default function ResetPasswordClient() {
         </div>
       </div>
     </div>
-  )
+  );
 }
