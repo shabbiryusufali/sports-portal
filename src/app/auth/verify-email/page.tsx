@@ -37,7 +37,6 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
   }
 
   if (record.expires < new Date()) {
-    // Clean up expired token
     await prisma.verificationToken.delete({ where: { token } });
     return (
       <Result
@@ -55,7 +54,6 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
     data: { emailVerified: new Date() },
   });
 
-  // Burn the token
   await prisma.verificationToken.delete({ where: { token } });
 
   return (
@@ -85,30 +83,97 @@ function Result({
   success?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="sp-auth-page">
+      <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
-        <div className="text-center mb-10">
-          <Link href="/">
-            <span className="inline-block text-4xl font-black tracking-tighter text-white">
-              SPORTS<span className="text-[#00ff87]">PORTAL</span>
-            </span>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-block",
+              fontSize: "2rem",
+              fontWeight: 900,
+              letterSpacing: "-0.05em",
+              textDecoration: "none",
+              color: "var(--text-primary)",
+            }}
+          >
+            SPORTS<span style={{ color: "var(--accent)" }}>PORTAL</span>
           </Link>
+          <p
+            style={{
+              marginTop: 8,
+              color: "var(--text-secondary)",
+              fontSize: "0.875rem",
+            }}
+          >
+            Manage your teams, events, and matches.
+          </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl text-center">
-          <div className="text-5xl mb-4">{icon}</div>
-          <h1 className="text-xl font-bold text-white mb-3">{title}</h1>
-          <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+        {/* Card */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 20,
+            padding: "32px",
+            textAlign: "center",
+          }}
+        >
+          {/* Icon badge */}
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background: success
+                ? "var(--accent-dim)"
+                : "rgba(248,113,113,0.07)",
+              border: success
+                ? "1px solid rgba(0,255,135,0.2)"
+                : "1px solid rgba(248,113,113,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1.625rem",
+              margin: "0 auto 20px",
+            }}
+          >
+            {icon}
+          </div>
+
+          <h1
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              marginBottom: 10,
+            }}
+          >
+            {title}
+          </h1>
+
+          <p
+            style={{
+              color: "var(--text-secondary)",
+              fontSize: "0.875rem",
+              lineHeight: 1.6,
+              marginBottom: 28,
+            }}
+          >
             {message}
           </p>
+
           <Link
             href={action.href}
-            className={`inline-block w-full font-bold py-2.5 rounded-xl transition text-sm ${
-              success
-                ? "bg-[#00ff87] text-zinc-900 hover:bg-[#00e87a]"
-                : "bg-zinc-800 text-white hover:bg-zinc-700"
-            }`}
+            className={success ? "sp-btn-primary" : "sp-btn-secondary"}
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+              padding: "12px",
+            }}
           >
             {action.label}
           </Link>

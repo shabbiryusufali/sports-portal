@@ -566,3 +566,40 @@ body {
     transparent 70%
   );
 }
+
+/* On short/small phones the card can overflow — switch to top-align */
+@media (max-width: 479px), (max-height: 700px) {
+  .sp-auth-page {
+    align-items: flex-start;
+    padding: 32px 16px 40px;
+  }
+}
+
+/* ─── Responsive 2-column grid ──────────────────────────────────────────── */
+.sp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 520px) {
+  .sp-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Horizontally-scrollable table wrapper ─────────────────────────────── */
+.sp-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* subtle scroll hint on mobile */
+}
+.sp-table-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+/* Make all admin/data grid rows scroll on mobile */
+@media (max-width: 640px) {
+  .sp-card [style*="grid-template-columns"] {
+    /* can't override inline styles from CSS, handled per-component */
+  }
+}

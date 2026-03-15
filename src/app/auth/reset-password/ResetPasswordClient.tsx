@@ -76,6 +76,7 @@ export default function ResetPasswordClient() {
           </p>
         </div>
 
+        {/* Card */}
         <div
           style={{
             background: "rgba(255,255,255,0.025)",
@@ -87,27 +88,13 @@ export default function ResetPasswordClient() {
           {/* Loading */}
           {stage === "loading" && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  border: "2px solid var(--accent)",
-                  borderTopColor: "transparent",
-                  borderRadius: "50%",
-                  animation: "spin 0.7s linear infinite",
-                  margin: "0 auto 16px",
-                }}
-              />
-              <p
-                style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}
-              >
-                Validating your link…
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                Verifying link…
               </p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
 
-          {/* Invalid / expired */}
+          {/* Invalid */}
           {stage === "invalid" && (
             <div style={{ textAlign: "center", padding: "16px 0" }}>
               <div
@@ -115,7 +102,7 @@ export default function ResetPasswordClient() {
                   width: 52,
                   height: 52,
                   borderRadius: 14,
-                  background: "rgba(248,113,113,0.1)",
+                  background: "rgba(248,113,113,0.07)",
                   border: "1px solid rgba(248,113,113,0.2)",
                   display: "flex",
                   alignItems: "center",
@@ -124,7 +111,7 @@ export default function ResetPasswordClient() {
                   margin: "0 auto 20px",
                 }}
               >
-                ⛔
+                ❌
               </div>
               <h2
                 style={{
@@ -144,13 +131,12 @@ export default function ResetPasswordClient() {
                   marginBottom: 24,
                 }}
               >
-                This password reset link has already been used or expired. Reset
-                links are valid for 1 hour.
+                This reset link has already been used or has expired. Reset links are valid for 1 hour.
               </p>
               <Link
                 href="/auth/forgot-password"
                 className="sp-btn-primary"
-                style={{ width: "100%", justifyContent: "center" }}
+                style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px" }}
               >
                 Request a new link
               </Link>
@@ -179,9 +165,7 @@ export default function ResetPasswordClient() {
                   }}
                 >
                   Setting a new password for{" "}
-                  <span
-                    style={{ color: "var(--text-primary)", fontWeight: 600 }}
-                  >
+                  <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                     {email}
                   </span>
                   .
@@ -189,10 +173,7 @@ export default function ResetPasswordClient() {
               )}
 
               {error && (
-                <div
-                  className="sp-notice sp-notice-err"
-                  style={{ marginBottom: 20 }}
-                >
+                <div className="sp-notice sp-notice-err" style={{ marginBottom: 20 }}>
                   {error}
                 </div>
               )}
@@ -233,13 +214,7 @@ export default function ResetPasswordClient() {
                     className="sp-input"
                   />
                   {confirm && password !== confirm && (
-                    <p
-                      style={{
-                        marginTop: 6,
-                        fontSize: "0.75rem",
-                        color: "#f87171",
-                      }}
-                    >
+                    <p style={{ marginTop: 6, fontSize: "0.75rem", color: "#f87171" }}>
                       Passwords do not match.
                     </p>
                   )}
@@ -290,14 +265,32 @@ export default function ResetPasswordClient() {
               >
                 Password updated!
               </h2>
-              <p
-                style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}
-              >
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
                 Your password has been changed. Redirecting to sign in…
               </p>
             </div>
           )}
         </div>
+
+        {/* Footer link (only shown on form stage) */}
+        {stage === "form" && (
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: "0.875rem",
+              color: "var(--text-secondary)",
+              marginTop: 20,
+            }}
+          >
+            Remembered it?{" "}
+            <Link
+              href="/auth/login"
+              style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "none" }}
+            >
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

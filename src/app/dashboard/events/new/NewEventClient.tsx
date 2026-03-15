@@ -60,15 +60,12 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
           />
         </div>
 
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
-        >
+        {/* Sport + Type — stack on mobile */}
+        <div className="sp-grid-2">
           <div>
             <label className="sp-label">Sport</label>
             {sports.length === 0 ? (
-              <p
-                style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}
-              >
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
                 No sports available yet.
               </p>
             ) : (
@@ -107,14 +104,7 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
         <div>
           <label className="sp-label">
             Description{" "}
-            <span
-              style={{
-                color: "var(--text-muted)",
-                fontWeight: 400,
-                textTransform: "none",
-                letterSpacing: 0,
-              }}
-            >
+            <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
               (optional)
             </span>
           </label>
@@ -140,9 +130,8 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
       >
         <p className="sp-section-title">Schedule & Location</p>
 
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
-        >
+        {/* Start + End — stack on mobile */}
+        <div className="sp-grid-2">
           <div>
             <label className="sp-label">Start Time</label>
             <input
@@ -163,20 +152,12 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
           </div>
         </div>
 
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
-        >
+        {/* Location + Registration deadline — stack on mobile */}
+        <div className="sp-grid-2">
           <div>
             <label className="sp-label">
               Location{" "}
-              <span
-                style={{
-                  color: "var(--text-muted)",
-                  fontWeight: 400,
-                  textTransform: "none",
-                  letterSpacing: 0,
-                }}
-              >
+              <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
                 (optional)
               </span>
             </label>
@@ -189,14 +170,7 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
           <div>
             <label className="sp-label">
               Registration Deadline{" "}
-              <span
-                style={{
-                  color: "var(--text-muted)",
-                  fontWeight: 400,
-                  textTransform: "none",
-                  letterSpacing: 0,
-                }}
-              >
+              <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
                 (optional)
               </span>
             </label>
@@ -222,14 +196,7 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
         >
           <p className="sp-section-title">
             Your Team{" "}
-            <span
-              style={{
-                color: "var(--text-muted)",
-                fontWeight: 400,
-                textTransform: "none",
-                letterSpacing: 0,
-              }}
-            >
+            <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
               (optional)
             </span>
           </p>
@@ -257,48 +224,11 @@ export default function NewEventClient({ sports, captainOfTeams }: Props) {
         </div>
       )}
 
-      {/* Visibility */}
-      <div className="sp-card" style={{ padding: "20px 24px" }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            cursor: "pointer",
-          }}
-        >
-          <input
-            name="is_public"
-            type="checkbox"
-            value="true"
-            style={{ width: 18, height: 18, accentColor: "var(--accent)" }}
-          />
-          <div>
-            <p style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-              Make event public
-            </p>
-            <p
-              style={{
-                fontSize: "0.8rem",
-                color: "var(--text-secondary)",
-                marginTop: 2,
-              }}
-            >
-              Public events are visible to all users.
-            </p>
-          </div>
-        </label>
-      </div>
-
       <button
         type="submit"
         disabled={pending}
         className="sp-btn-primary"
-        style={{
-          alignSelf: "flex-start",
-          padding: "12px 28px",
-          fontSize: "0.9375rem",
-        }}
+        style={{ justifyContent: "center", padding: "13px" }}
       >
         {pending ? "Creating…" : "Create Event"}
       </button>
