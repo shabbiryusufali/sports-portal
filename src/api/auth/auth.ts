@@ -1,14 +1,16 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/utils/password";
+import { authConfig } from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
-    Google,
+    // Override the Credentials provider with the real authorize() implementation.
+    // This file only runs in the Node.js runtime (API routes), never on the Edge.
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -56,22 +58,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/auth/login",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token?.id) session.user.id = token.id as string;
-      if (token?.email) session.user.email = token.email as string;
-      return session;
-    },
-  },
 });
