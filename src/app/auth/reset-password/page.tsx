@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { validateResetToken, resetPassword } from "./actions";
@@ -52,6 +52,8 @@ export default function ResetPasswordPage() {
   };
 
   return (
+        <Suspense fallback={<div className="text-center py-6">Loading…</div>}>
+
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
@@ -188,5 +190,6 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+        </Suspense>
   );
 }
