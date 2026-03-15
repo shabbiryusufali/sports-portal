@@ -18,10 +18,6 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
-      "dist/**",
-      "coverage/**",
-      "*.config.mjs",
-      "**/*",
       "next-env.d.ts",
     ],
     rules: {
