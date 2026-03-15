@@ -220,7 +220,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div style={{ divideY: "1px" }}>
+            <div>
               {upcomingEvents.map((e) => {
                 const typeIcon =
                   e.event_type === "GAME"
