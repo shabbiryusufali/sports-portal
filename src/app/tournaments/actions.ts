@@ -331,7 +331,9 @@ export async function recordMatchResult(input: {
     const p1Id = match.participant1_id;
     const p2Id = match.participant2_id;
 
-    let { resultType, winnerId, forfeiterId } = input;
+    let resultType = input.resultType;
+	let winnerId =	 input.winnerId;
+	const forfeiterId = input.forfeiterId;
 
     // Auto-infer from games if resultType not specified
     if (!resultType && input.games?.length) {
