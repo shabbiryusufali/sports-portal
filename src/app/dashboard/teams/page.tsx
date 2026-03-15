@@ -12,7 +12,9 @@ export default async function TeamsPage() {
       <div className="sp-page-header">
         <div>
           <h1 className="sp-page-title">Teams</h1>
-          <p className="sp-page-subtitle">Browse all teams or create your own.</p>
+          <p className="sp-page-subtitle">
+            Browse all teams or create your own.
+          </p>
         </div>
       </div>
 

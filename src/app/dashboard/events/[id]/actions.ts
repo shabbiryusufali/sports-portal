@@ -16,10 +16,14 @@ export async function getEventData(id: string) {
       where: { id },
       include: {
         sport: true,
-        organizer: { select: { id: true, name: true, email: true, is_admin: true } },
+        organizer: {
+          select: { id: true, name: true, email: true, is_admin: true },
+        },
         participants: {
           include: {
-            captain: { include: { user: { select: { name: true, email: true } } } },
+            captain: {
+              include: { user: { select: { name: true, email: true } } },
+            },
             _count: { select: { members: true } },
           },
         },
@@ -56,7 +60,8 @@ export async function getEventData(id: string) {
     orderBy: { first_name: "asc" },
   });
 
-  const canManage = event.organizer_id === session.user.id || (user?.is_admin ?? false);
+  const canManage =
+    event.organizer_id === session.user.id || (user?.is_admin ?? false);
 
   const playerProfile = await prisma.player.findUnique({
     where: { id: session.user.id },
@@ -177,14 +182,14 @@ export async function addMatch(
 
     await prisma.match.create({
       data: {
-        sport_id:    event.sport_id,
-        event_id:    eventId,
-        team_a_id:   data.teamAId   ?? null,
-        team_b_id:   data.teamBId   ?? null,
+        sport_id: event.sport_id,
+        event_id: eventId,
+        team_a_id: data.teamAId ?? null,
+        team_b_id: data.teamBId ?? null,
         player_a_id: data.playerAId ?? null,
         player_b_id: data.playerBId ?? null,
         match_date,
-        match_type:  data.matchType,
+        match_type: data.matchType,
       },
     });
 

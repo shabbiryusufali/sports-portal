@@ -39,20 +39,22 @@ export async function createEvent(
   form: FormData,
 ): Promise<{ success: boolean; message?: string; id?: string }> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: "Not authenticated" };
+  if (!session?.user?.id)
+    return { success: false, message: "Not authenticated" };
 
-  const sport_id    = (form.get("sport_id") as string)?.trim();
-  const rawType     = (String(form.get("type") ?? "PRACTICE")).toUpperCase() as EventType;
-  const start       = new Date(String(form.get("start")));
-  const end         = new Date(String(form.get("end")));
-  const notes       = (form.get("notes")       as string) || null;
-  const baseName    = (form.get("name")        as string)?.trim() || `${rawType} session`;
-  const location    = (form.get("location")    as string) || null;
+  const sport_id = (form.get("sport_id") as string)?.trim();
+  const rawType = String(
+    form.get("type") ?? "PRACTICE",
+  ).toUpperCase() as EventType;
+  const start = new Date(String(form.get("start")));
+  const end = new Date(String(form.get("end")));
+  const notes = (form.get("notes") as string) || null;
+  const baseName = (form.get("name") as string)?.trim() || `${rawType} session`;
+  const location = (form.get("location") as string) || null;
   const description = (form.get("description") as string) || null;
-  const teamId      = (form.get("team_id")     as string) || null;
+  const teamId = (form.get("team_id") as string) || null;
 
-  if (!sport_id)
-    return { success: false, message: "Sport is required." };
+  if (!sport_id) return { success: false, message: "Sport is required." };
   if (isNaN(start.getTime()) || isNaN(end.getTime()))
     return { success: false, message: "Invalid dates." };
   if (end <= start)
@@ -68,7 +70,10 @@ export async function createEvent(
     });
     if (!team) return { success: false, message: "Team not found." };
     if (team.captain_id !== session.user.id)
-      return { success: false, message: "You must be team captain to add that team." };
+      return {
+        success: false,
+        message: "You must be team captain to add that team.",
+      };
   }
 
   // FIX: auto-increment event name on collision so "ASDF" → "ASDF 1" → "ASDF 2" etc.
@@ -93,7 +98,7 @@ export async function createEvent(
       end_time: end,
       notes,
       location,
-      sport:     { connect: { id: sport_id } },
+      sport: { connect: { id: sport_id } },
       organizer: { connect: { id: session.user.id } },
       ...(teamId ? { participants: { connect: { id: teamId } } } : {}),
     },

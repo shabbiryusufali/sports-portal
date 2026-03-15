@@ -15,9 +15,9 @@ export default async function DashboardLayout({
   // Resolve display info — fall back gracefully if id is missing
   const userId = session?.user?.id;
   let displayName = session?.user?.name ?? session?.user?.email ?? "Athlete";
-  let email       = session?.user?.email ?? "";
-  let username    = "";
-  let isAdmin     = false;
+  let email = session?.user?.email ?? "";
+  let username = "";
+  let isAdmin = false;
 
   if (userId) {
     try {
@@ -27,9 +27,9 @@ export default async function DashboardLayout({
       });
       if (user) {
         displayName = user.name ?? user.email ?? displayName;
-        email       = user.email;
-        username    = user.username ?? "";
-        isAdmin     = user.is_admin ?? false;
+        email = user.email;
+        username = user.username ?? "";
+        isAdmin = user.is_admin ?? false;
       }
     } catch {
       // Non-fatal — sidebar will still render with session data
@@ -44,7 +44,6 @@ export default async function DashboardLayout({
   };
 
   return (
-    
     <div className="sp-shell">
       <DashboardSidebar
         displayName={displayName}

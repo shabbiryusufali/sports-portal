@@ -10,7 +10,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const FROM = process.env.EMAIL_FROM ?? `"Sports Portal" <no-reply@sportsportal.app>`;
+const FROM =
+  process.env.EMAIL_FROM ?? `"Sports Portal" <no-reply@sportsportal.app>`;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
 function htmlWrapper(title: string, body: string): string {
@@ -46,7 +47,10 @@ const SMALL = `font-size:12px;color:#52525b;margin:0 0 8px;`;
 const P = `margin:0 0 16px;font-size:14px;line-height:1.6;color:#a1a1aa;`;
 const H2 = `margin:0 0 12px;font-size:20px;color:#fff;`;
 
-export async function sendVerificationEmail(to: string, token: string): Promise<void> {
+export async function sendVerificationEmail(
+  to: string,
+  token: string,
+): Promise<void> {
   const url = `${BASE_URL}/auth/verify-email?token=${token}`;
 
   await transporter.sendMail({
@@ -66,7 +70,10 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   });
 }
 
-export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+): Promise<void> {
   const url = `${BASE_URL}/auth/reset-password?token=${token}`;
 
   await transporter.sendMail({

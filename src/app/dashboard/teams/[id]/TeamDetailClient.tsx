@@ -11,7 +11,12 @@ interface Props {
   members: { id: string; name: string }[];
 }
 
-export default function TeamDetailClient({ teamId, isCaptain, isMember, members }: Props) {
+export default function TeamDetailClient({
+  teamId,
+  isCaptain,
+  isMember,
+  members,
+}: Props) {
   const [pending, start] = useTransition();
   const [selected, setSelected] = useState(members[0]?.id ?? "");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -26,8 +31,13 @@ export default function TeamDetailClient({ teamId, isCaptain, isMember, members 
     setError(null);
     start(async () => {
       const res = await transferCaptaincy(teamId, selected);
-      if (!res.success) { setError(res.message ?? "Failed to transfer captaincy."); setShowConfirm(false); }
-      else { setTransferSuccess(true); setShowConfirm(false); }
+      if (!res.success) {
+        setError(res.message ?? "Failed to transfer captaincy.");
+        setShowConfirm(false);
+      } else {
+        setTransferSuccess(true);
+        setShowConfirm(false);
+      }
     });
   }
 
@@ -42,40 +52,82 @@ export default function TeamDetailClient({ teamId, isCaptain, isMember, members 
 
   if (leaveSuccess) {
     return (
-      <div className="sp-notice sp-notice-ok">You have left the team. Refresh to update the page.</div>
+      <div className="sp-notice sp-notice-ok">
+        You have left the team. Refresh to update the page.
+      </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {error   && <div className="sp-notice sp-notice-err">{error}</div>}
-      {notice  && <div className="sp-notice sp-notice-ok">{notice}</div>}
+      {error && <div className="sp-notice sp-notice-err">{error}</div>}
+      {notice && <div className="sp-notice sp-notice-ok">{notice}</div>}
 
       {/* Transfer captaincy — captain only */}
       {isCaptain && members.length > 0 && (
         <div>
           {transferSuccess ? (
-            <div className="sp-notice sp-notice-ok">Captaincy transferred to {selectedName}. Refresh to see the change.</div>
+            <div className="sp-notice sp-notice-ok">
+              Captaincy transferred to {selectedName}. Refresh to see the
+              change.
+            </div>
           ) : (
             <>
-              <p className="sp-section-title" style={{ marginBottom: 10 }}>Transfer Captaincy</p>
+              <p className="sp-section-title" style={{ marginBottom: 10 }}>
+                Transfer Captaincy
+              </p>
               {!showConfirm ? (
                 <div style={{ display: "flex", gap: 8 }}>
-                  <select value={selected} onChange={(e) => setSelected(e.target.value)} className="sp-select" style={{ flex: 1 }}>
-                    {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  <select
+                    value={selected}
+                    onChange={(e) => setSelected(e.target.value)}
+                    className="sp-select"
+                    style={{ flex: 1 }}
+                  >
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
                   </select>
-                  <button onClick={() => setShowConfirm(true)} disabled={!selected} className="sp-btn-secondary" style={{ fontSize: "0.8125rem", padding: "8px 14px" }}>
+                  <button
+                    onClick={() => setShowConfirm(true)}
+                    disabled={!selected}
+                    className="sp-btn-secondary"
+                    style={{ fontSize: "0.8125rem", padding: "8px 14px" }}
+                  >
                     Transfer
                   </button>
                 </div>
               ) : (
-                <div className="sp-notice sp-notice-warn" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-                  <p style={{ fontSize: "0.875rem" }}>Transfer captain role to <strong>{selectedName}</strong>? You will lose captain privileges.</p>
+                <div
+                  className="sp-notice sp-notice-warn"
+                  style={{
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 10,
+                  }}
+                >
+                  <p style={{ fontSize: "0.875rem" }}>
+                    Transfer captain role to <strong>{selectedName}</strong>?
+                    You will lose captain privileges.
+                  </p>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={handleTransfer} disabled={pending} className="sp-btn-primary" style={{ fontSize: "0.8125rem", padding: "7px 16px" }}>
+                    <button
+                      onClick={handleTransfer}
+                      disabled={pending}
+                      className="sp-btn-primary"
+                      style={{ fontSize: "0.8125rem", padding: "7px 16px" }}
+                    >
                       {pending ? "Transferring…" : "Yes, Transfer"}
                     </button>
-                    <button onClick={() => setShowConfirm(false)} className="sp-btn-ghost" style={{ fontSize: "0.8125rem" }}>Cancel</button>
+                    <button
+                      onClick={() => setShowConfirm(false)}
+                      className="sp-btn-ghost"
+                      style={{ fontSize: "0.8125rem" }}
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               )}
@@ -86,9 +138,22 @@ export default function TeamDetailClient({ teamId, isCaptain, isMember, members 
 
       {/* Leave team — non-captain members only */}
       {isMember && !isCaptain && (
-        <div style={{ paddingTop: isCaptain ? 16 : 0, borderTop: isCaptain ? "1px solid var(--border)" : "none" }}>
-          <p className="sp-section-title" style={{ marginBottom: 10 }}>Leave Team</p>
-          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: 12 }}>
+        <div
+          style={{
+            paddingTop: isCaptain ? 16 : 0,
+            borderTop: isCaptain ? "1px solid var(--border)" : "none",
+          }}
+        >
+          <p className="sp-section-title" style={{ marginBottom: 10 }}>
+            Leave Team
+          </p>
+          <p
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--text-secondary)",
+              marginBottom: 12,
+            }}
+          >
             You will be removed from this team's roster.
           </p>
           <button

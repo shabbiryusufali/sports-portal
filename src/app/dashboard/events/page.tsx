@@ -24,9 +24,13 @@ export default async function EventsPage() {
       <div className="sp-page-header">
         <div>
           <h1 className="sp-page-title">Events</h1>
-          <p className="sp-page-subtitle">Browse all events across every sport.</p>
+          <p className="sp-page-subtitle">
+            Browse all events across every sport.
+          </p>
         </div>
-        <Link href="/dashboard/events/new" className="sp-btn-primary">+ New Event</Link>
+        <Link href="/dashboard/events/new" className="sp-btn-primary">
+          + New Event
+        </Link>
       </div>
 
       <EventsClient

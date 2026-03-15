@@ -31,7 +31,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           if (!user.password_hash) {
-            console.error("authorize: user has no password (OAuth-only account)");
+            console.error(
+              "authorize: user has no password (OAuth-only account)",
+            );
             return null;
           }
 

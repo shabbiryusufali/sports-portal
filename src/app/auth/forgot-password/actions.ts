@@ -26,7 +26,9 @@ export async function requestPasswordReset(
     if (!user) return { success: true };
 
     // Invalidate any existing tokens for this email.
-    await prisma.passwordResetToken.deleteMany({ where: { email: user.email } });
+    await prisma.passwordResetToken.deleteMany({
+      where: { email: user.email },
+    });
 
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + TOKEN_TTL_MS);

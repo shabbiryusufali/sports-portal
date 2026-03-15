@@ -10,12 +10,14 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
 
   // ── No token in URL ───────────────────────────────────────────────────────
   if (!token) {
-    return <Result
-      icon="❌"
-      title="Invalid link"
-      message="This verification link is missing a token. Please check your email and try again."
-      action={{ href: "/auth/login", label: "Back to sign in" }}
-    />;
+    return (
+      <Result
+        icon="❌"
+        title="Invalid link"
+        message="This verification link is missing a token. Please check your email and try again."
+        action={{ href: "/auth/login", label: "Back to sign in" }}
+      />
+    );
   }
 
   // ── Look up token ─────────────────────────────────────────────────────────
@@ -24,23 +26,27 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
   });
 
   if (!record) {
-    return <Result
-      icon="❌"
-      title="Link already used or invalid"
-      message="This verification link has already been used or doesn't exist. If your account is already verified, just sign in."
-      action={{ href: "/auth/login", label: "Sign in" }}
-    />;
+    return (
+      <Result
+        icon="❌"
+        title="Link already used or invalid"
+        message="This verification link has already been used or doesn't exist. If your account is already verified, just sign in."
+        action={{ href: "/auth/login", label: "Sign in" }}
+      />
+    );
   }
 
   if (record.expires < new Date()) {
     // Clean up expired token
     await prisma.verificationToken.delete({ where: { token } });
-    return <Result
-      icon="⏰"
-      title="Link expired"
-      message="This verification link expired after 24 hours. Please register again to receive a new one."
-      action={{ href: "/auth/register", label: "Register again" }}
-    />;
+    return (
+      <Result
+        icon="⏰"
+        title="Link expired"
+        message="This verification link expired after 24 hours. Please register again to receive a new one."
+        action={{ href: "/auth/register", label: "Register again" }}
+      />
+    );
   }
 
   // ── Mark email as verified ────────────────────────────────────────────────
@@ -52,13 +58,15 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
   // Burn the token
   await prisma.verificationToken.delete({ where: { token } });
 
-  return <Result
-    icon="✅"
-    title="Email verified!"
-    message="Your email address has been confirmed. You can now sign in to your account."
-    action={{ href: "/auth/login", label: "Sign in now" }}
-    success
-  />;
+  return (
+    <Result
+      icon="✅"
+      title="Email verified!"
+      message="Your email address has been confirmed. You can now sign in to your account."
+      action={{ href: "/auth/login", label: "Sign in now" }}
+      success
+    />
+  );
 }
 
 // ── Shared result UI ──────────────────────────────────────────────────────────
@@ -91,7 +99,9 @@ function Result({
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl text-center">
           <div className="text-5xl mb-4">{icon}</div>
           <h1 className="text-xl font-bold text-white mb-3">{title}</h1>
-          <p className="text-zinc-400 text-sm leading-relaxed mb-6">{message}</p>
+          <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+            {message}
+          </p>
           <Link
             href={action.href}
             className={`inline-block w-full font-bold py-2.5 rounded-xl transition text-sm ${
