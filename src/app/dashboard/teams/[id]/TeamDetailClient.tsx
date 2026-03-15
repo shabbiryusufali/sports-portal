@@ -23,7 +23,7 @@ export default function TeamDetailClient({
   const [transferSuccess, setTransferSuccess] = useState(false);
   const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // Removed unused notice state
 
   const selectedName = members.find((m) => m.id === selected)?.name ?? "";
 
@@ -61,7 +61,7 @@ export default function TeamDetailClient({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {error && <div className="sp-notice sp-notice-err">{error}</div>}
-      {notice && <div className="sp-notice sp-notice-ok">{notice}</div>}
+      {/* Removed unused notice display */}
 
       {/* Transfer captaincy — captain only */}
       {isCaptain && members.length > 0 && (
@@ -154,7 +154,7 @@ export default function TeamDetailClient({
               marginBottom: 12,
             }}
           >
-            You will be removed from this team's roster.
+            You will be removed from this team&rsquo;s roster.
           </p>
           <button
             disabled={pending}
